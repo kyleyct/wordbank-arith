@@ -323,6 +323,77 @@ for (const fam of DRILL_CATALOG) {
       }
     }
 
+
+    if (fam.id === "percent_convert") {
+      for (const q of qs) {
+        if (/應用|折扣|利息|增加了百分之|減少了百分之/.test(q.prompt)) {
+          console.error("6N4-like leak", q.prompt);
+          failures++;
+          break;
+        }
+        const kind = mode.id === "mixed" ? (q.meta && q.meta.kind) : mode.id;
+        if (kind === "pct_to_dec") {
+          const m = q.prompt.match(/^([0-9.]+)%/);
+          if (!m) {
+            console.error("pct_to_dec parse", q.prompt);
+            failures++;
+            break;
+          }
+          const expect = +m[1] / 100;
+          if (Math.abs(expect - +q.answer) > 1e-9) {
+            console.error("pct_to_dec ans", q, expect);
+            failures++;
+            break;
+          }
+        }
+        if (kind === "dec_to_pct") {
+          if (!/%$/.test(String(q.answer))) {
+            console.error("dec_to_pct answer not %", q);
+            failures++;
+            break;
+          }
+          const m = q.prompt.match(/^([0-9.]+)\s*=/);
+          const pm = String(q.answer).match(/^([0-9.]+)%$/);
+          if (!m || !pm || Math.abs(+m[1] * 100 - +pm[1]) > 1e-9) {
+            console.error("dec_to_pct mismatch", q);
+            failures++;
+            break;
+          }
+        }
+        if (kind === "pct_to_frac") {
+          const m = q.prompt.match(/^([0-9.]+)%/);
+          if (!m || !q.answer) {
+            console.error("pct_to_frac parse", q);
+            failures++;
+            break;
+          }
+          // answer must be simplified fraction or integer/mixed — spot-check 2.5%→1/40 if present
+          if (+m[1] === 2.5 && String(q.answer).replace(/\s/g, "") !== "1/40") {
+            // only fail if this exact item appears with wrong ans
+            const scaled = Math.round(+m[1] * 10);
+            // 2.5 → 25/1000 = 1/40
+          }
+          if (+m[1] === 2.5 && !["1/40"].includes(String(q.answer).replace(/\s/g, ""))) {
+            console.error("2.5% should be 1/40", q);
+            failures++;
+            break;
+          }
+        }
+        if (kind === "frac_to_pct") {
+          if (!/%$/.test(String(q.answer))) {
+            console.error("frac_to_pct answer not %", q);
+            failures++;
+            break;
+          }
+        }
+      }
+      // curriculum honesty: family edb is 6N3 only
+      if (fam.edb !== "6N3") {
+        console.error("percent family must be 6N3 only", fam.edb);
+        failures++;
+      }
+    }
+
     const rng2 = createRng(seed);
     const qs2 = generateQuestions(fam.id, mode.id, rng2, 48, { allowTrivial: false });
     if (JSON.stringify(qs) !== JSON.stringify(qs2)) {

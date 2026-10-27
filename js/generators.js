@@ -150,6 +150,18 @@ export const DRILL_CATALOG = [
     ],
   },
   {
+    id: "percent_convert",
+    title_zh: "百分數互化",
+    edb: "6N3",
+    modes: [
+      { id: "pct_to_dec", label_zh: "百分數 → 小數" },
+      { id: "dec_to_pct", label_zh: "小數 → 百分數" },
+      { id: "pct_to_frac", label_zh: "百分數 → 最簡分數" },
+      { id: "frac_to_pct", label_zh: "分數 → 百分數" },
+      { id: "mixed", label_zh: "百分／小數／分數互化混合" },
+    ],
+  },
+  {
     id: "mixed_ops",
     title_zh: "四則混合（含圓括號）",
     edb: "3N4, 4N5",
@@ -1085,6 +1097,108 @@ function genIntMulDivVertical(rng, mode, count, opts = {}) {
   return out;
 }
 
+/* ---------- 14. 百分數互化（6N3 only；不含 6N4 應用題） ---------- */
+/**
+ * 課標示例範圍：百分數↔小數、百分數↔分數；分數答案須最簡
+ *（如 2.5%=1/40）；可含 >100%（如 122%=1.22）。不含應用題／折扣／利息。
+ */
+function formatPctLabel(pctNum) {
+  // pctNum 為百分數數值（25 → "25%"；2.5 → "2.5%"）
+  let s = String(pctNum);
+  if (s.includes(".")) s = s.replace(/\.?0+$/, "");
+  return `${s}%`;
+}
+
+function formatPlainDec(n) {
+  if (!Number.isFinite(n)) return "0";
+  if (Math.abs(n - Math.round(n)) < 1e-12) return String(Math.round(n));
+  let s = n.toFixed(6).replace(/\.?0+$/, "");
+  if (s === "-0") s = "0";
+  return s;
+}
+
+/** 預設題庫：整數％與一位小數％（課標有 2.5%、122% 等） */
+function percentBank() {
+  // 足夠題幹去重（≥48）；含課標示例風格（2.5%、122%）及常見整數％
+  const ints = [];
+  for (let i = 1; i <= 100; i++) ints.push(i);
+  for (const x of [105, 110, 115, 120, 122, 125, 130, 140, 150, 160, 175, 180, 200, 250]) {
+    ints.push(x);
+  }
+  const tenths = [];
+  for (let t = 5; t <= 995; t += 10) {
+    // 0.5, 1.5, … 但略過已是整數的 *.0 — 此步皆 x.5
+    tenths.push(t / 10);
+  }
+  // 去重
+  return [...new Set(ints.concat(tenths))];
+}
+
+/** pctNum（如 2.5）→ 最簡分數字串（相對 1，即 pct/100） */
+function pctToFracAnswer(pctNum) {
+  // 以千分之一百分比避免浮點：2.5 → 25/10
+  const scaled = Math.round(pctNum * 10); // 一位小數足夠
+  // pct/100 = (scaled/10)/100 = scaled/1000
+  return formatFrac(scaled, 1000, { allowMixed: true });
+}
+
+function pctToDecAnswer(pctNum) {
+  return formatPlainDec(pctNum / 100);
+}
+
+function genPercentConvert(rng, mode, count, opts = {}) {
+  const out = [];
+  const bank = percentBank();
+
+  // 分數→百分數：只取能化成有限百分數（至多一位小數）者
+  const fracPctPairs = [];
+  for (const pct of bank) {
+    const scaled = Math.round(pct * 10);
+    const s = simplifyFrac(scaled, 1000);
+    fracPctPairs.push({
+      frac: formatFrac(s.num, s.den, { allowMixed: true }),
+      num: s.num,
+      den: s.den,
+      pct,
+      pctLabel: formatPctLabel(pct),
+      dec: pctToDecAnswer(pct),
+    });
+  }
+
+  for (let i = 0; i < count; i++) {
+    const item = pick(rng, fracPctPairs);
+    let dir = mode;
+    if (mode === "mixed") {
+      dir = pick(rng, ["pct_to_dec", "dec_to_pct", "pct_to_frac", "frac_to_pct"]);
+    }
+    if (dir === "pct_to_dec") {
+      out.push(
+        q(`${item.pctLabel} = □（小數）`, item.dec, { kind: "pct_to_dec", pct: item.pct })
+      );
+    } else if (dir === "dec_to_pct") {
+      out.push(
+        q(`${item.dec} = □（百分數）`, item.pctLabel, { kind: "dec_to_pct", pct: item.pct })
+      );
+    } else if (dir === "pct_to_frac") {
+      out.push(
+        q(`${item.pctLabel} = □（最簡分數）`, item.frac, {
+          kind: "pct_to_frac",
+          pct: item.pct,
+        })
+      );
+    } else {
+      // frac_to_pct — 題幹用最簡（可帶）分數；答案為百分數
+      out.push(
+        q(`${item.frac} = □（百分數）`, item.pctLabel, {
+          kind: "frac_to_pct",
+          pct: item.pct,
+        })
+      );
+    }
+  }
+  return out;
+}
+
 const HANDLERS = {
   bonds_add_sub: genBondsAddSub,
   mult_div_table: genMultDiv,
@@ -1099,6 +1213,7 @@ const HANDLERS = {
   dec_add_sub: genDecAddSub,
   frac_dec_convert: genFracDecConvert,
   dec_mul_div: genDecMulDiv,
+  percent_convert: genPercentConvert,
   mixed_ops: genMixedOps,
 };
 
