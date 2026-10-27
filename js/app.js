@@ -33,6 +33,47 @@ function activeModeMeta() {
   return f.modes.find((m) => m.id === $("#mode").value);
 }
 
+/** True if answer / text contains a simple or mixed fraction a/b. */
+function looksLikeFraction(s) {
+  return /(?:^|[^\d.])\d+\s+\d+\/\d+(?!\d)|(?:^|[^\d.])\d+\/\d+(?!\d)/.test(
+    String(s)
+  ) || /^\s*[−-]?\d+\/\d+\s*$/.test(String(s)) || /^\s*[−-]?\d+\s+\d+\/\d+\s*$/.test(String(s));
+}
+
+function fracHtml(num, den, neg = false) {
+  const sign = neg ? '<span class="frac-neg">−</span>' : "";
+  return `${sign}<span class="frac" title="${num}/${den}"><span class="frac-num">${num}</span><span class="frac-bar" aria-hidden="true"></span><span class="frac-den">${den}</span></span>`;
+}
+
+function mixedHtml(whole, num, den, neg = false) {
+  const sign = neg ? '<span class="frac-neg">−</span>' : "";
+  return `<span class="mixed">${sign}<span class="mixed-whole">${whole}</span>${fracHtml(num, den, false)}</span>`;
+}
+
+/**
+ * Escape HTML, then turn schoolbook fractions (n/d, mixed w n/d) into stacked
+ * vertical fractions, and □ into handwriting blanks.
+ * @param {string} s
+ * @param {{ fracBlank?: boolean }} [opts]
+ */
+function formatMathHtml(s, { fracBlank = false } = {}) {
+  let out = escapeHtml(s);
+
+  // Mixed numbers first: optional minus + whole + proper fraction
+  out = out.replace(/([−-])?(\d+)\s+(\d+)\/(\d+)/g, (_, sign, whole, num, den) =>
+    mixedHtml(whole, num, den, !!sign)
+  );
+
+  // Proper / improper inline fractions (skip if already inside HTML we emitted — we emit no raw /)
+  out = out.replace(/([−-])?(\d+)\/(\d+)/g, (_, sign, num, den) =>
+    fracHtml(num, den, !!sign)
+  );
+
+  const blankClass = fracBlank ? "blank blank-frac" : "blank";
+  out = out.replace(/□/g, `<span class="${blankClass}" aria-label="填空"></span>`);
+  return out;
+}
+
 function renderSheet(questions, meta) {
   const sheet = $("#sheet");
   const answers = $("#answer-sheet");
@@ -56,24 +97,27 @@ function renderSheet(questions, meta) {
   const rows = Math.max(1, Math.ceil(questions.length / cols));
 
   const qHtml = questions
-    .map(
-      (q, i) =>
-        `<div class="q"><span class="qn">${i + 1}.</span> <span class="qp">${formatPrompt(
-          q.prompt
-        )}</span></div>`
-    )
+    .map((q, i) => {
+      const fracAns = looksLikeFraction(q.answer) || looksLikeFraction(q.prompt);
+      const cls = fracAns ? "q has-frac" : "q";
+      return `<div class="${cls}"><span class="qn">${i + 1}.</span> <span class="qp">${formatMathHtml(
+        q.prompt,
+        { fracBlank: looksLikeFraction(q.answer) }
+      )}</span></div>`;
+    })
     .join("");
 
   sheet.innerHTML = `${header}<div class="qgrid cols-${cols}" style="--rows:${rows}">${qHtml}</div>
     <footer class="sheet-footer">橫式心算　約 10–15 秒／題　自檢請見答案頁</footer>`;
 
   const aHtml = questions
-    .map(
-      (q, i) =>
-        `<div class="q ans"><span class="qn">${i + 1}.</span> <span class="qp">${escapeHtml(
-          String(q.answer)
-        )}</span></div>`
-    )
+    .map((q, i) => {
+      const fracAns = looksLikeFraction(q.answer);
+      const cls = fracAns ? "q ans has-frac" : "q ans";
+      return `<div class="${cls}"><span class="qn">${i + 1}.</span> <span class="qp">${formatMathHtml(
+        String(q.answer)
+      )}</span></div>`;
+    })
     .join("");
 
   answers.innerHTML = `
@@ -83,11 +127,6 @@ function renderSheet(questions, meta) {
       <p class="edb">種子：${meta.seed}　題數：${questions.length}</p>
     </header>
     <div class="qgrid cols-${cols}" style="--rows:${rows}">${aHtml}</div>`;
-}
-
-/** Escape HTML, then turn □ into a large handwriting box. */
-function formatPrompt(s) {
-  return escapeHtml(s).replace(/□/g, '<span class="blank" aria-label="填空"></span>');
 }
 
 function escapeHtml(s) {
@@ -118,6 +157,37 @@ function generate() {
   $("#empty-hint").hidden = true;
 }
 
+/** Optional URL overrides: ?family=&mode=&seed=&count=&columns= (defaults unchanged). */
+function applyQueryParams() {
+  const sp = new URLSearchParams(location.search);
+  if (sp.has("family")) {
+    const id = sp.get("family");
+    if ([...$("#family").options].some((o) => o.value === id)) {
+      $("#family").value = id;
+      syncModes();
+    }
+  }
+  if (sp.has("mode")) {
+    const id = sp.get("mode");
+    if ([...$("#mode").options].some((o) => o.value === id)) {
+      $("#mode").value = id;
+    }
+  }
+  if (sp.has("seed")) {
+    $("#seed").value = sp.get("seed");
+  }
+  if (sp.has("count")) {
+    const n = Number(sp.get("count"));
+    if (Number.isFinite(n)) $("#count").value = String(n);
+  }
+  if (sp.has("columns")) {
+    const c = sp.get("columns");
+    if ([...$("#columns").options].some((o) => o.value === c)) {
+      $("#columns").value = c;
+    }
+  }
+}
+
 function init() {
   fillSelects();
   $("#btn-generate").addEventListener("click", generate);
@@ -126,8 +196,15 @@ function init() {
     $("#seed").value = String((Math.random() * 0xffffffff) >>> 0);
     generate();
   });
-  // auto first page for smoke test convenience
-  $("#seed").value = "20261015";
+
+  const sp = new URLSearchParams(location.search);
+  applyQueryParams();
+
+  // Default demo page for smoke / first load; query params override family/mode/seed
+  if (!sp.has("seed")) {
+    $("#seed").value = "20261015";
+  }
+  // Keep default family/mode (within10) unless query overrides were applied
   generate();
 }
 
