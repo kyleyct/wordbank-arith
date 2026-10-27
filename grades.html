@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>年級與課程對照｜WordBank 算術操練</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f7fbfb;
+      --ink: #121417;
+      --teal: #0d9488;
+      --pink: #ff2d7b;
+      --line: #d5e3e3;
+      --muted: #5a6570;
+      --warn: #9a3412;
+      --warn-bg: #fff7ed;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Noto Sans TC", "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.55;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 1.25rem 1.25rem 3rem;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+    nav a { color: var(--teal); font-weight: 500; }
+    h1 {
+      font-size: 1.55rem;
+      margin: 0 0 0.35rem;
+      color: var(--teal);
+    }
+    .lead { color: var(--muted); margin: 0 0 1rem; }
+    .note, .sources {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      margin: 0 0 1.25rem;
+      font-size: 0.92rem;
+    }
+    .note strong { color: var(--ink); }
+    .extra {
+      background: var(--warn-bg);
+      border: 1px solid #fed7aa;
+      color: var(--warn);
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.88rem;
+      margin-top: 0.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 0.7rem 0.75rem;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      background: #ecfdf5;
+      color: #115e59;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: none; }
+    code {
+      font-size: 0.85em;
+      background: #f1f5f9;
+      padding: 0.05em 0.35em;
+      border-radius: 4px;
+    }
+    .grade {
+      font-weight: 700;
+      color: var(--teal);
+      white-space: nowrap;
+    }
+    .modes { color: var(--muted); font-size: 0.86rem; margin-top: 0.25rem; }
+    h2 {
+      font-size: 1.15rem;
+      margin: 1.75rem 0 0.6rem;
+      color: var(--ink);
+    }
+    ul.compact { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    @media (max-width: 720px) {
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      tr {
+        border-bottom: 1px solid var(--line);
+        padding: 0.75rem 0.5rem;
+      }
+      td {
+        border: none;
+        padding: 0.2rem 0.5rem;
+      }
+      td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #115e59;
+        margin-bottom: 0.15rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a href="./">← 返回工作紙產生器</a>
+      <a href="https://github.com/kyleyct/wordbank-arith">GitHub</a>
+    </nav>
+
+    <h1>年級與課程對照</h1>
+    <p class="lead">說明本站每一個操練族（題目族）大致對應香港小學數學科「數」範疇的哪個年級與學習單位。標示為<strong>典型年級提示</strong>，並非學校必須的教學時序。</p>
+
+    <div class="note">
+      <strong>誠實聲明：</strong>
+      <ul class="compact">
+        <li>單位代碼與制約摘自專案內課程地圖，以及教育局公開文件（見下方來源）；<strong>未發明</strong>任何單位代碼。</li>
+        <li>同一操練族若涵蓋多個單位，表內會分開標示模式／關卡與對應年級。</li>
+        <li>本工具<strong>不含</strong>應用題、幾何、度量、數據處理、代數方程。</li>
+        <li>乘法表課程要求為 <strong>0–10</strong>；「11–12 挑戰」屬<strong>課程外延展</strong>，不可標為課標必修。</li>
+      </ul>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>操練族</th>
+          <th>典型年級</th>
+          <th>學習階段</th>
+          <th>EDB 單位</th>
+          <th>說明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-label="操練族"><strong>10／18 以內加減與分解</strong>
+            <div class="modes">關卡一：10 以內　｜　關卡二：18 以內口算</div>
+          </td>
+          <td data-label="典型年級" class="grade">小一（P1）</td>
+          <td data-label="學習階段">KS1</td>
+          <td data-label="EDB 單位"><code>1N1</code>、<code>1N2</code></td>
+          <td data-label="說明">2–18 分解合成；18 以內加減口算；認識 0 的性質。直式留待較後單位。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>100 以內加減</strong>
+            <div class="modes">無退位（1N4）　｜　退位／進位（兩位數，和＜100）</div>
+          </td>
+          <td data-label="典型年級" class="grade">小一–小二（P1–P2）</td>
+          <td data-label="學習階段">KS1</td>
+          <td data-label="EDB 單位"><code>1N4</code>（無退位）；退位模式對齊 <code>2N2</code>／<code>2N5</code> 兩位子集</td>
+          <td data-label="說明">與「1000 以內」為<strong>獨立操練族</strong>，題目不會混在一起。1N4 減法不須涉及退位。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>乘法表與整除除法</strong>
+            <div class="modes">乘法表 0–10　｜　表內整除　｜　乘除混合　｜　11–12 挑戰</div>
+          </td>
+          <td data-label="典型年級" class="grade">小二（P2）</td>
+          <td data-label="學習階段">KS1</td>
+          <td data-label="EDB 單位"><code>2N3</code>、<code>2N6</code></td>
+          <td data-label="說明">課程明確要求乘法表 <strong>(0–10)</strong>；表內除法以可解為限。本站 P0 先做<strong>整除（無餘數）</strong>。
+            <div class="extra">「11–12 挑戰」＝<strong>課程外延展</strong>，無對應 EDB 單位；介面已標示，勿寫成必修。</div>
+          </td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>1000 以內加減（三位數）</strong>
+            <div class="modes">三位數加　｜　三位數退位減　｜　三數加減混合</div>
+          </td>
+          <td data-label="典型年級" class="grade">小二（P2）</td>
+          <td data-label="學習階段">KS1</td>
+          <td data-label="EDB 單位"><code>2N2</code>、<code>2N5</code></td>
+          <td data-label="說明">三位數進位加、退位減；和＜1000。與「100 以內」分開，不混題。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>四則混合（含圓括號）</strong>
+            <div class="modes">乘加／乘減（3N4）　｜　四則混合（4N5）</div>
+          </td>
+          <td data-label="典型年級" class="grade">小三–小四（P3–P4）</td>
+          <td data-label="學習階段">KS1–KS2</td>
+          <td data-label="EDB 單位"><code>3N4</code>、<code>4N5</code></td>
+          <td data-label="說明">可多對<strong>平行</strong>圓括號；<strong>不包括嵌套</strong>多重括號（屬初中）。先乘除後加減。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>同分母分數加減</strong>
+            <div class="modes">結果不大於 1（3N5）　｜　可大於 1（4N6）</div>
+          </td>
+          <td data-label="典型年級" class="grade">小三–小四（P3–P4）</td>
+          <td data-label="學習階段">KS1–KS2</td>
+          <td data-label="EDB 單位"><code>3N5</code>、<code>4N6</code></td>
+          <td data-label="說明">3N5：不多於三個同分母分數，結果 ≤1。4N6：可大於 1；答案優先最簡（可帶分／假分）。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>因數／倍數／質數</strong>
+            <div class="modes">列因數　｜　是否倍數　｜　100 以內質數　｜　整除性 2／3／5／10</div>
+          </td>
+          <td data-label="典型年級" class="grade">小四（P4）</td>
+          <td data-label="學習階段">KS2</td>
+          <td data-label="EDB 單位"><code>4N3</code>、<code>4N2</code></td>
+          <td data-label="說明">質數判別限 100 以內；整除性（2、3、5、10）可作因數操練前置。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>兩數 H.C.F.／L.C.M.</strong>
+            <div class="modes">H.C.F.　｜　L.C.M.　｜　混合</div>
+          </td>
+          <td data-label="典型年級" class="grade">小四（P4）</td>
+          <td data-label="學習階段">KS2</td>
+          <td data-label="EDB 單位"><code>4N4</code></td>
+          <td data-label="說明">僅<strong>兩個數</strong>；列舉法／短除法。三數 L.C.M.／H.C.F. 不在本階段範圍。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>小數加減</strong>
+            <div class="modes">一位／兩位小數（≤3 個數）</div>
+          </td>
+          <td data-label="典型年級" class="grade">小四（P4）</td>
+          <td data-label="學習階段">KS2</td>
+          <td data-label="EDB 單位"><code>4N8</code></td>
+          <td data-label="說明">僅一位或兩位小數；可含整數；避免超課程數位預算的繁複題。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>異分母分數加減</strong>
+            <div class="modes">分母 ≤12；不多於三個分數</div>
+          </td>
+          <td data-label="典型年級" class="grade">小五（P5）</td>
+          <td data-label="學習階段">KS2</td>
+          <td data-label="EDB 單位"><code>5N2</code></td>
+          <td data-label="說明">三個異分母時分母皆不宜超過 12；求三數 LCM 非課程所需。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>分數乘除</strong>
+            <div class="modes">分數乘法　｜　分數除法（≤3 個數）</div>
+          </td>
+          <td data-label="典型年級" class="grade">小五（P5）</td>
+          <td data-label="學習階段">KS2</td>
+          <td data-label="EDB 單位"><code>5N3</code>、<code>5N5</code></td>
+          <td data-label="說明">簡化版；三個分數相乘／除時不宜多於一個帶分數（課程制約）。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>小數乘除（簡易）</strong>
+            <div class="modes">×10／100／0.1／0.01　｜　÷10／100／0.1／0.01</div>
+          </td>
+          <td data-label="典型年級" class="grade">小五–小六（P5–P6）</td>
+          <td data-label="學習階段">KS2</td>
+          <td data-label="EDB 單位"><code>5N4</code>、<code>6N1</code> 子集</td>
+          <td data-label="說明">本站目前為「10 的冪」簡易子集，<strong>不是</strong>完整一般小數乘除四則。</td>
+        </tr>
+        <tr>
+          <td data-label="操練族"><strong>分數 ↔ 小數互化</strong>
+            <div class="modes">小數→分數　｜　分數→小數　｜　互化混合</div>
+          </td>
+          <td data-label="典型年級" class="grade">小四–小六（P4–P6）</td>
+          <td data-label="學習階段">KS2</td>
+          <td data-label="EDB 單位"><code>4N7</code>（關係前置）、<code>6N2</code>（互化核心）</td>
+          <td data-label="說明">小數化為分母 10／100／1000 之分數並約簡；不引入「循環小數」一詞（非小學所需）。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>資料來源（專案內）</h2>
+    <div class="sources">
+      <ul class="compact">
+        <li>地圖摘要與單位詳注：<code>edb-primary-arithmetic-map.md</code>、<code>edb-primary-arithmetic-map.json</code></li>
+        <li>操練族定義（介面標題與 <code>edb</code> 欄）：<code>js/generators.js</code></li>
+        <li>教育局原文（繁體 PDF，置於 <code>sources/</code>）：
+          <ul class="compact">
+            <li><code>pmc2017_tc.pdf</code> — 《數學教育學習領域課程指引補充文件：小學數學科學習內容》（2017）</li>
+            <li><code>EN_KS1_tc.pdf</code> — 《小學數學課程闡釋（第一學習階段）》（2018）</li>
+            <li><code>EN_KS2_tc.pdf</code> — 《小學數學課程闡釋（第二學習階段）》（2020）</li>
+          </ul>
+        </li>
+        <li>教育局課程索引：<a href="https://www.edb.gov.hk/tc/curriculum-development/kla/ma/curr/index2.html">edb.gov.hk …/ma/curr/</a></li>
+      </ul>
+    </div>
+
+    <footer>
+      WordBank 算術操練 · 年級說明為課程地圖之簡化閱讀版 · <a href="./">返回產生器</a>
+    </footer>
+  </div>
+</body>
+</html>
