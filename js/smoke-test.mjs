@@ -28,6 +28,10 @@ console.assert(isTrivialPrompt("4 × 3 ÷ 3 = □"), "detect ×m÷m");
 console.assert(isTrivialPrompt("10 = 10 + □"), "detect bond zero");
 console.assert(!isTrivialPrompt("6 + 2 = □"), "non-trivial add");
 console.assert(!isTrivialPrompt("7 × 8 = □"), "non-trivial mul");
+console.assert(!isTrivialPrompt("1.5 × 2 = □"), "decimal 1.5 not ×1 trivial");
+console.assert(!isTrivialPrompt("3 × 0.5 = □"), "decimal 0.5 not ×0 trivial");
+console.assert(!isTrivialPrompt("2.4 ÷ 1.2 = □"), "÷1.2 not ÷1 trivial");
+console.assert(isTrivialPrompt("2.4 ÷ 1 = □"), "÷1 still trivial");
 
 const seed = 20261015;
 let failures = 0;
@@ -225,6 +229,96 @@ for (const fam of DRILL_CATALOG) {
             failures++;
             break;
           }
+        }
+      }
+    }
+
+
+    if (fam.id === "dec_mul_div" && (mode.id === "mul_dec_int" || mode.id === "mul_dec_dec")) {
+      for (const q of qs) {
+        const m = q.prompt.match(/([0-9.]+)\s*×\s*([0-9.]+)/);
+        if (!m) {
+          console.error("mul parse fail", q.prompt);
+          failures++;
+          break;
+        }
+        const a = +m[1];
+        const b = +m[2];
+        const places = (n) => {
+          const s = String(n);
+          return s.includes(".") ? s.split(".")[1].length : 0;
+        };
+        const digs = (n) => {
+          let s = String(n).replace(/^-/, "").replace(".", "").replace(/^0+/, "");
+          return s.length || 1;
+        };
+        if (places(a) > 2 || places(b) > 2) {
+          console.error("mul >2dp", q.prompt);
+          failures++;
+          break;
+        }
+        const hi = Math.max(digs(a), digs(b));
+        const lo = Math.min(digs(a), digs(b));
+        if (hi > 3 || lo > 2) {
+          console.error("mul digit>4N1", q.prompt, hi, lo);
+          failures++;
+          break;
+        }
+        // banned examples must never appear
+        if (q.prompt.includes("0.124") || /\d+\.\d{3}/.test(q.prompt)) {
+          console.error("3dp mul leak", q.prompt);
+          failures++;
+          break;
+        }
+        const prod = Math.round(a * b * 1e10) / 1e10;
+        const ans = +q.answer;
+        if (Math.abs(prod - ans) > 1e-8) {
+          console.error("mul ans mismatch", q, prod);
+          failures++;
+          break;
+        }
+      }
+    }
+
+    if (fam.id === "dec_mul_div" && mode.id === "div_general") {
+      for (const q of qs) {
+        const m = q.prompt.match(/([0-9.]+)\s*÷\s*([0-9.]+)/);
+        if (!m) {
+          console.error("div parse fail", q.prompt);
+          failures++;
+          break;
+        }
+        const dividend = +m[1];
+        const divisor = +m[2];
+        // 4N2-style check after scaling divisor to int
+        const dStr = String(divisor);
+        const p = dStr.includes(".") ? dStr.split(".")[1].length : 0;
+        const scale = 10 ** p;
+        const newDivisor = Math.round(divisor * scale);
+        const newDividend = dividend * scale;
+        const nds = String(Number(newDividend.toFixed(10)));
+        const dividendDigits = nds.replace(".", "").replace(/^0+/, "").length || 1;
+        const divisorDigits = String(newDivisor).replace(/^0+/, "").length || 1;
+        if (dividendDigits > 3 || divisorDigits > 2) {
+          console.error("div digit>4N2", q.prompt, "->", nds, "/", newDivisor, dividendDigits, divisorDigits);
+          failures++;
+          break;
+        }
+        // banned patterns
+        if (
+          q.prompt.replace(/\s/g, "") === "12.34÷5.6" ||
+          q.prompt.replace(/\s/g, "") === "12.3÷5.67" ||
+          q.prompt.replace(/\s/g, "") === "123÷0.4"
+        ) {
+          console.error("banned div example", q.prompt);
+          failures++;
+          break;
+        }
+        const expect = dividend / divisor;
+        if (Math.abs(expect - +q.answer) > 1e-8) {
+          console.error("div ans mismatch", q, expect);
+          failures++;
+          break;
         }
       }
     }

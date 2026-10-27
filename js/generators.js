@@ -139,11 +139,14 @@ export const DRILL_CATALOG = [
   },
   {
     id: "dec_mul_div",
-    title_zh: "小數乘除（簡易）",
+    title_zh: "小數乘除",
     edb: "5N4, 6N1",
     modes: [
-      { id: "mul_powers", label_zh: "×10／100／0.1／0.01" },
-      { id: "div_powers", label_zh: "÷10／100／0.1／0.01" },
+      { id: "mul_powers", label_zh: "5N4：×10／100／1000／0.1／0.01／0.001" },
+      { id: "div_powers", label_zh: "6N1：÷10／100／1000／0.1／0.01／0.001" },
+      { id: "mul_dec_int", label_zh: "5N4：小數 × 整數（一位／兩位小數）" },
+      { id: "mul_dec_dec", label_zh: "5N4：小數 × 小數（一位／兩位小數）" },
+      { id: "div_general", label_zh: "6N1：小數除法四類（數位≤4N2）" },
     ],
   },
   {
@@ -609,22 +612,280 @@ function genFracDecConvert(rng, mode, count, opts = {}) {
   return out;
 }
 
-/* ---------- 11. 小數 ×÷ 10 的冪 ---------- */
+/* ---------- 11. 小數乘除（5N4 / 6N1） ---------- */
+/** 去掉小數點後的有效數位（略去前導 0）：0.124→3、12.41→4、12→2 */
+function decDigitCount(n) {
+  let s = formatScaledPlain(n);
+  s = s.replace(/^-/, "").replace(".", "").replace(/^0+/, "");
+  return s.length || 1;
+}
+
+/** 小數位數目（整數為 0） */
+function decPlacesOf(n) {
+  const s = formatScaledPlain(n);
+  const i = s.indexOf(".");
+  return i < 0 ? 0 : s.length - i - 1;
+}
+
+/** 穩定小數／整數字串（避免科學記號） */
+function formatScaledPlain(n) {
+  if (!Number.isFinite(n)) return "0";
+  if (Object.is(n, -0)) return "0";
+  const sign = n < 0 ? "-" : "";
+  let x = Math.abs(n);
+  // 整數
+  if (Math.abs(x - Math.round(x)) < 1e-12) return sign + String(Math.round(x));
+  // 最多 6 位小數再去尾 0
+  let s = x.toFixed(6).replace(/\.?0+$/, "");
+  if (!s.includes(".")) return sign + s;
+  return sign + s;
+}
+
+/** 以整數縮放表示：value = int / 10^places（int 為非負） */
+function toDecParts(n) {
+  const s = formatScaledPlain(n);
+  const neg = s.startsWith("-");
+  const t = neg ? s.slice(1) : s;
+  if (!t.includes(".")) return { int: Number(t), places: 0, neg };
+  const [a, b] = t.split(".");
+  return { int: Number(a + b), places: b.length, neg };
+}
+
+function fromDecParts(intVal, places, neg = false) {
+  if (places <= 0) return neg ? -intVal : intVal;
+  const s = String(intVal).padStart(places + 1, "0");
+  const whole = s.slice(0, s.length - places);
+  const frac = s.slice(s.length - places);
+  const plain = `${whole}.${frac}`.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  const n = Number(plain);
+  return neg ? -n : n;
+}
+
+function formatDecAnswer(n) {
+  return formatScaledPlain(n);
+}
+
+/**
+ * 5N4 一般乘法數位：小數須為一位或兩位；去掉小數點後須能置於 4N1
+ * （≤三位數 × ≤兩位數）。排除如 0.124×3.9、12.4×3.42、12.41×2.6。
+ */
+function mulDecDigitsOk(a, b) {
+  if (decPlacesOf(a) > 2 || decPlacesOf(b) > 2) return false;
+  // 兩因數皆非整數時各自 ≤2 位小數已查；整數視作 0 位小數
+  const da = decDigitCount(a);
+  const db = decDigitCount(b);
+  const hi = Math.max(da, db);
+  const lo = Math.min(da, db);
+  return hi <= 3 && lo <= 2;
+}
+
+/**
+ * 6N1 一般除法：把除數調至整數後，被除數數位≤3、除數數位≤2。
+ * 排除如 12.34÷5.6、12.3÷5.67、123÷0.4。
+ */
+function divDecDigitsOk(dividend, divisor) {
+  if (!Number.isFinite(dividend) || !Number.isFinite(divisor) || divisor === 0) return false;
+  const p = decPlacesOf(divisor);
+  const scale = 10 ** p;
+  // 整數縮放避免浮點
+  const ds = toDecParts(divisor);
+  const ns = toDecParts(dividend);
+  // 兩邊同乘 10^p（p = divisor places）
+  const newDivInt = ds.int; // 已是整數
+  // dividend * 10^p = ns.int * 10^(p - ns.places) 或帶剩餘小數位
+  let newDivPlaces = ns.places - p;
+  let newDivDigitsInt = ns.int;
+  if (newDivPlaces < 0) {
+    newDivDigitsInt = ns.int * 10 ** (-newDivPlaces);
+    newDivPlaces = 0;
+  }
+  // 組成字串計數位
+  let divStr = String(newDivDigitsInt);
+  if (newDivPlaces > 0) {
+    divStr = divStr.padStart(newDivPlaces + 1, "0");
+    const w = divStr.slice(0, divStr.length - newDivPlaces);
+    const f = divStr.slice(divStr.length - newDivPlaces);
+    divStr = `${w}.${f}`;
+  }
+  const dividendDigits = divStr.replace(".", "").replace(/^0+/, "").length || 1;
+  const divisorDigits = String(newDivInt).replace(/^0+/, "").length || 1;
+  return dividendDigits <= 3 && divisorDigits <= 2;
+}
+
+/** 產生一位或兩位小數（可選強制有小數點） */
+function randDec1or2(rng, { minDigits = 1, maxDigits = 3, forcePlaces = null } = {}) {
+  const places = forcePlaces != null ? forcePlaces : randInt(rng, 1, 2);
+  const maxInt = 10 ** maxDigits - 1;
+  const minInt = minDigits <= 1 ? 1 : 10 ** (minDigits - 1);
+  let intVal = randInt(rng, minInt, maxInt);
+  // 確保縮放後仍有正確小數位（避免 120 / 100 = 1.2 變成 1 位但 int 像 3 位）
+  // 直接用 int/10^places
+  while (intVal % 10 === 0 && intVal >= 10) intVal = Math.floor(intVal / 10);
+  if (intVal === 0) intVal = randInt(rng, 1, 9);
+  return fromDecParts(intVal, places, false);
+}
+
+function randIntDigits(rng, minDigits, maxDigits) {
+  const d = randInt(rng, minDigits, maxDigits);
+  const lo = d === 1 ? 1 : 10 ** (d - 1);
+  const hi = 10 ** d - 1;
+  return randInt(rng, lo, hi);
+}
+
 function genDecMulDiv(rng, mode, count, opts = {}) {
+  const allowTrivial = !!opts.allowTrivial;
   const out = [];
-  const fmt = (x) => {
-    const r = Math.round(x * 1000) / 1000;
-    return String(r);
-  };
+  const powerK = [10, 100, 1000, 0.1, 0.01, 0.001];
+
   for (let i = 0; i < count; i++) {
-    const base = randInt(rng, 1, 999) / pick(rng, [1, 10, 100]);
-    const b = Math.round(base * 100) / 100;
     if (mode === "mul_powers") {
-      const k = pick(rng, [10, 100, 0.1, 0.01]);
-      out.push(q(`${fmt(b)} × ${k} = □`, fmt(b * k)));
+      const base = randInt(rng, 1, 999) / pick(rng, [1, 10, 100]);
+      const b = Math.round(base * 100) / 100;
+      const k = pick(rng, powerK);
+      const bp = toDecParts(b);
+      const kp = toDecParts(k);
+      const prodInt = bp.int * kp.int;
+      const prodPlaces = bp.places + kp.places;
+      const ans = fromDecParts(prodInt, prodPlaces, false);
+      out.push(q(`${formatDecAnswer(b)} × ${formatDecAnswer(k)} = □`, formatDecAnswer(ans)));
+    } else if (mode === "div_powers") {
+      const base = randInt(rng, 1, 999) / pick(rng, [1, 10, 100]);
+      const b = Math.round(base * 100) / 100;
+      const k = pick(rng, powerK);
+      // b / k = b * (1/k)；用縮放
+      const bp = toDecParts(b);
+      const kp = toDecParts(k);
+      // (bp.int / 10^bp.places) / (kp.int / 10^kp.places) = bp.int / kp.int * 10^(kp.places - bp.places)
+      // 保證整除：選 b 使對 10 的冪整除通常可；否則用浮點再 format
+      const ans = b / k;
+      out.push(q(`${formatDecAnswer(b)} ÷ ${formatDecAnswer(k)} = □`, formatDecAnswer(ans)));
+    } else if (mode === "mul_dec_int" || mode === "mul_dec_dec") {
+      let a;
+      let b;
+      let guard = 0;
+      do {
+        if (mode === "mul_dec_int") {
+          a = randDec1or2(rng, { minDigits: 1, maxDigits: 3 });
+          b = allowTrivial ? randIntDigits(rng, 1, 2) : randIntDigits(rng, 1, 2);
+          if (!allowTrivial && (b === 0 || b === 1)) b = randInt(rng, 2, 9);
+          // 隨機交換：整數×小數 亦屬 5N4
+          if (rng() < 0.45) {
+            const t = a;
+            a = b;
+            b = t;
+          }
+        } else {
+          a = randDec1or2(rng, { minDigits: 1, maxDigits: 3 });
+          b = randDec1or2(rng, { minDigits: 1, maxDigits: 2 });
+        }
+        guard++;
+      } while ((!mulDecDigitsOk(a, b) || (!allowTrivial && (a === 0 || b === 0 || a === 1 || b === 1))) && guard < 60);
+
+      if (!mulDecDigitsOk(a, b)) {
+        a = 1.2;
+        b = mode === "mul_dec_int" ? 3 : 0.4;
+      }
+      const ap = toDecParts(a);
+      const bp = toDecParts(b);
+      const prod = fromDecParts(ap.int * bp.int, ap.places + bp.places, false);
+      out.push(
+        q(`${formatDecAnswer(a)} × ${formatDecAnswer(b)} = □`, formatDecAnswer(prod), {
+          kind: mode,
+        })
+      );
     } else {
-      const k = pick(rng, [10, 100, 0.1, 0.01]);
-      out.push(q(`${fmt(b)} ÷ ${k} = □`, fmt(b / k)));
+      // div_general — 四類混合；構造整除／有限小數商，並通過 6N1 數位檢查
+      const kind = pick(rng, ["dec_div_int", "int_div_dec", "dec_div_dec", "int_div_int"]);
+      let dividend;
+      let divisor;
+      let quot;
+      let guard = 0;
+      do {
+        if (kind === "dec_div_int") {
+          divisor = allowTrivial ? randInt(rng, 2, 20) : randInt(rng, 2, 20);
+          quot = randDec1or2(rng, { minDigits: 1, maxDigits: 2, forcePlaces: randInt(rng, 1, 2) });
+          const qp = toDecParts(quot);
+          const dp = toDecParts(divisor);
+          dividend = fromDecParts(qp.int * dp.int, qp.places + dp.places, false);
+        } else if (kind === "int_div_dec") {
+          divisor = randDec1or2(rng, { minDigits: 1, maxDigits: 2, forcePlaces: randInt(rng, 1, 2) });
+          quot = allowTrivial ? randInt(rng, 1, 30) : randInt(rng, 2, 30);
+          const qp = toDecParts(quot);
+          const dp = toDecParts(divisor);
+          dividend = fromDecParts(qp.int * dp.int, qp.places + dp.places, false);
+          // 商為整數時被除數可能帶小數——OK
+        } else if (kind === "dec_div_dec") {
+          divisor = randDec1or2(rng, { minDigits: 1, maxDigits: 2 });
+          quot = randDec1or2(rng, { minDigits: 1, maxDigits: 2 });
+          const qp = toDecParts(quot);
+          const dp = toDecParts(divisor);
+          dividend = fromDecParts(qp.int * dp.int, qp.places + dp.places, false);
+        } else {
+          // 整數÷整數，商為有限小數（构造：dividend 整數 = qInt*divisor/10^places）
+          let places = randInt(rng, 1, 2);
+          const mod = 10 ** places;
+          divisor = allowTrivial ? randInt(rng, 2, 25) : randInt(rng, 2, 25);
+          let qInt = randInt(rng, 1, 80);
+          let g2 = 0;
+          // qInt % mod !== 0 → 商必含小數（非整數）
+          while (((qInt * divisor) % mod !== 0 || qInt % mod === 0) && g2 < 50) {
+            qInt = randInt(rng, 1, 80);
+            divisor = allowTrivial ? randInt(rng, 2, 25) : randInt(rng, 2, 25);
+            g2++;
+          }
+          if ((qInt * divisor) % mod !== 0 || qInt % mod === 0) {
+            places = 1;
+            divisor = 2;
+            qInt = 5; // 1 ÷ 2 = 0.5
+          }
+          dividend = (qInt * divisor) / (10 ** places);
+          quot = fromDecParts(qInt, places, false);
+        }
+        guard++;
+      } while (
+        (divisor === 0 ||
+          !divDecDigitsOk(dividend, divisor) ||
+          (!allowTrivial && (divisor === 1 || dividend === 0))) &&
+        guard < 80
+      );
+
+      if (!divDecDigitsOk(dividend, divisor) || divisor === 0) {
+        // 安全後備（已知合規）：4.8 ÷ 2 = 2.4
+        dividend = 4.8;
+        divisor = 2;
+        quot = 2.4;
+      } else {
+        // 用精確縮放重算商（構造題應可十進位整除）
+        const np = toDecParts(dividend);
+        const dp = toDecParts(divisor);
+        const scaleP = Math.max(np.places, dp.places);
+        const nInt = np.int * 10 ** (scaleP - np.places);
+        const dInt = dp.int * 10 ** (scaleP - dp.places);
+        if (dInt !== 0 && nInt % dInt === 0) {
+          quot = nInt / dInt;
+        } else {
+          // 擴分至分母只含 2／5 後仍不整除則回退安全題
+          let ok = false;
+          for (let extra = 0; extra <= 6; extra++) {
+            const n2 = nInt * 10 ** extra;
+            if (dInt !== 0 && n2 % dInt === 0) {
+              quot = n2 / dInt / 10 ** extra;
+              ok = true;
+              break;
+            }
+          }
+          if (!ok) {
+            dividend = 4.8;
+            divisor = 2;
+            quot = 2.4;
+          }
+        }
+      }
+      out.push(
+        q(`${formatDecAnswer(dividend)} ÷ ${formatDecAnswer(divisor)} = □`, formatDecAnswer(quot), {
+          kind: "div_general",
+        })
+      );
     }
   }
   return out;
@@ -853,12 +1114,13 @@ const HANDLERS = {
 export function isTrivialPrompt(prompt) {
   const p = String(prompt).replace(/\s+/g, " ").trim();
   if (/(\d+)\s*−\s*\1\b/.test(p)) return true;
-  if (/(?:^|[^\d])0\s*\+/.test(p) || /\+\s*0(?!\d)/.test(p)) return true;
-  if (/−\s*0(?!\d)/.test(p)) return true;
-  if (/(?:^|[^\d])0\s*×/.test(p) || /×\s*0(?!\d)/.test(p)) return true;
-  if (/(?:^|[^\d])1\s*×/.test(p) || /×\s*1(?!\d)/.test(p)) return true;
-  if (/÷\s*1(?!\d)/.test(p)) return true;
-  if (/(?:^|[^\d])0\s*÷/.test(p)) return true;
+  // 整數 0／1 恆等；勿把 0.5、1.2 等小數誤判（後隨小數點則排除）
+  if (/(?:^|[^0-9.])0\s*\+/.test(p) || /\+\s*0(?![0-9.])/.test(p)) return true;
+  if (/−\s*0(?![0-9.])/.test(p)) return true;
+  if (/(?:^|[^0-9.])0\s*×/.test(p) || /×\s*0(?![0-9.])/.test(p)) return true;
+  if (/(?:^|[^0-9.])1\s*×/.test(p) || /×\s*1(?![0-9.])/.test(p)) return true;
+  if (/÷\s*1(?![0-9.])/.test(p)) return true;
+  if (/(?:^|[^0-9.])0\s*÷/.test(p)) return true;
   if (/×\s*(\d+)\s*÷\s*\1\b/.test(p)) return true;
   if (/(\d+)\s*=\s*\1\s*\+\s*□/.test(p)) return true;
   if (/\d+\s*=\s*0\s*\+\s*□/.test(p)) return true;
