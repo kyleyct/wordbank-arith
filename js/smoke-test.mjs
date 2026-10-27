@@ -155,7 +155,24 @@ for (const fam of DRILL_CATALOG) {
           failures++;
           break;
         }
-        if (mode.id.startsWith("mul_")) {
+        if (mode.id === "mul_chain3") {
+          if (q.meta.layout !== "vertical_mul_chain") {
+            console.error("expected vertical_mul_chain", q);
+            failures++;
+            break;
+          }
+          const [a, b, c] = q.meta.factors;
+          if (String(a).length !== 2 || String(b).length !== 1 || String(c).length !== 1) {
+            console.error("mul_chain3 digit leak", a, b, c);
+            failures++;
+            break;
+          }
+          if (String(a * b * c) !== String(q.answer)) {
+            console.error("mul_chain3 product mismatch", q);
+            failures++;
+            break;
+          }
+        } else if (mode.id.startsWith("mul_")) {
           if (q.meta.layout !== "vertical_mul") {
             console.error("expected vertical_mul", mode.id, q);
             failures++;
@@ -191,7 +208,31 @@ for (const fam of DRILL_CATALOG) {
             break;
           }
         }
-        if (mode.id.startsWith("div_")) {
+        if (mode.id === "div_chain3") {
+          if (q.meta.layout !== "vertical_div_chain") {
+            console.error("expected vertical_div_chain", q);
+            failures++;
+            break;
+          }
+          const [d1, d2] = q.meta.divisors;
+          const mid = q.meta.mid;
+          const finalQ = q.meta.quotient;
+          if (mid * d1 !== q.meta.dividend || finalQ * d2 !== mid) {
+            console.error("div_chain3 arithmetic", q);
+            failures++;
+            break;
+          }
+          if (String(q.answer) !== String(finalQ)) {
+            console.error("div_chain3 answer", q);
+            failures++;
+            break;
+          }
+          if (/⋯/.test(String(q.answer)) || q.meta.remainTemplate) {
+            console.error("div_chain3 must be exact quotient-only", q);
+            failures++;
+            break;
+          }
+        } else if (mode.id.startsWith("div_")) {
           if (q.meta.layout !== "vertical_div") {
             console.error("expected vertical_div", mode.id, q);
             failures++;
@@ -401,6 +442,59 @@ for (const fam of DRILL_CATALOG) {
       if (fam.edb !== "6N3") {
         console.error("percent family must be 6N3 only", fam.edb);
         failures++;
+      }
+    }
+
+
+    if (fam.id === "hcf_lcm") {
+      const three = mode.id.endsWith("_3");
+      if (three) {
+        if (!mode.advanced || !mode.extracurricular) {
+          console.error("three-number HCF/LCM must be advanced+extracurricular", mode);
+          failures++;
+        }
+        if (!/進階課題/.test(mode.label_zh)) {
+          console.error("three-number mode label must say 進階課題", mode.label_zh);
+          failures++;
+        }
+        for (const q of qs) {
+          if (!/、/.test(q.prompt)) {
+            console.error("three-number prompt should list three nums", q.prompt);
+            failures++;
+            break;
+          }
+        }
+      } else {
+        for (const q of qs) {
+          if (/、/.test(q.prompt)) {
+            console.error("two-number mode leaked three-number prompt", q.prompt);
+            failures++;
+            break;
+          }
+        }
+      }
+    }
+
+    if (fam.id === "dec_mul_div" && mode.id === "mixed_le4") {
+      for (const q of qs) {
+        // count operands roughly: digits/decimals separated by ops
+        const ops = (q.prompt.match(/[＋+−\-×÷]/g) || []).length;
+        // ≤4 numbers ⇒ ≤3 binary ops outside parens; allow up to 3 ops for 4 nums
+        if (ops < 1 || ops > 3) {
+          console.error("mixed_le4 op count out of range", q.prompt, ops);
+          failures++;
+          break;
+        }
+        if (/\([^)]*\(/.test(q.prompt)) {
+          console.error("nested parens not allowed", q.prompt);
+          failures++;
+          break;
+        }
+        if (q.meta && q.meta.kind !== "mixed_le4") {
+          console.error("mixed_le4 meta kind", q);
+          failures++;
+          break;
+        }
       }
     }
 

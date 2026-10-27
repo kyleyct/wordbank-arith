@@ -400,6 +400,40 @@
       min-width: 2.8em;
       justify-content: flex-end;
     }
+    .valg-mul-chain .valg-bot { min-width: 14mm; }
+    .valg-div-chain {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1.5mm;
+      vertical-align: middle;
+    }
+    .valg-div-chain-step {
+      display: inline-block;
+    }
+    .valg-div-chain .valg-div-body {
+      display: inline-flex;
+      align-items: stretch;
+    }
+    .valg-chain-next {
+      display: inline-flex;
+      align-items: center;
+      gap: 1mm;
+      font-variant-numeric: tabular-nums;
+      margin-left: 2mm;
+    }
+    .blank.blank-valg-mid {
+      width: 10mm;
+      height: 6mm;
+      border-width: 1.5px;
+      opacity: 0.85;
+    }
+    .tag-advanced {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #f59e0b;
+    }
+
 
     .sheet-footer {
       margin-top: 1rem;
@@ -467,7 +501,7 @@
         <button type="button" id="btn-print">列印／PDF</button>
       </div>
     </div>
-    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。表內除法分<strong>整除</strong>與<strong>帶餘數</strong>兩模式（帶餘數題面為「□⋯□」雙格；第 1 題為例題）；「整數乘除直式」另族（3N2／3N3／4N1／4N2），位數限制依課程地圖。「百分數互化」僅對應 <strong>6N3</strong>（百分↔小數／分數），<strong>不含 6N4 應用題</strong>。</p>
+    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。表內除法分<strong>整除</strong>與<strong>帶餘數</strong>兩模式（帶餘數題面為「□⋯□」雙格；第 1 題為例題）；「整數乘除直式」含 3N2／3N3／4N1／4N2 及三數連乘／連除直式。「小數乘除」含 <strong>6N1.4</strong> 小數四則混合（≤4 個數）。「三數 H.C.F.／L.C.M.」標為<strong>進階課題</strong>（4N4 必修僅兩數，三數非課標要求）。「百分數互化」僅對應 <strong>6N3</strong>，<strong>不含 6N4 應用題</strong>。</p>
   </div>
 
   <p id="empty-hint">請按「產生工作紙」。</p>

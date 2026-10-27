@@ -23,7 +23,9 @@ function syncModes() {
   for (const m of f.modes) {
     const opt = document.createElement("option");
     opt.value = m.id;
-    opt.textContent = m.extracurricular ? `⚠ ${m.label_zh}` : m.label_zh;
+    if (m.advanced) opt.textContent = `★ ${m.label_zh}`;
+    else if (m.extracurricular) opt.textContent = `⚠ ${m.label_zh}`;
+    else opt.textContent = m.label_zh;
     mode.appendChild(opt);
   }
   // 直式題較佔高：預設改為 2 欄、約 24 題（使用者仍可手動改）
@@ -66,6 +68,38 @@ function verticalMulHtml(top, bottom, { showAnswer = false, answer = "" } = {}) 
     <span class="valg-row valg-bot"><span class="valg-sign">×</span>${bottom}</span>
     <span class="valg-bar" aria-hidden="true"></span>
     <span class="valg-row valg-ans">${ans}</span>
+  </span>`;
+}
+
+/** 三數連乘直式：a × b × c */
+function verticalMulChainHtml(factors, { showAnswer = false, answer = "" } = {}) {
+  const [a, b, c] = factors;
+  const ans = showAnswer
+    ? `<span class="valg-ans-text">${escapeHtml(String(answer))}</span>`
+    : `<span class="blank blank-valg" aria-label="填空"></span>`;
+  return `<span class="valg valg-mul valg-mul-chain" title="${a} × ${b} × ${c}">
+    <span class="valg-row valg-top">${a}</span>
+    <span class="valg-row valg-bot"><span class="valg-sign">×</span>${b}</span>
+    <span class="valg-row valg-bot"><span class="valg-sign">×</span>${c}</span>
+    <span class="valg-bar" aria-hidden="true"></span>
+    <span class="valg-row valg-ans">${ans}</span>
+  </span>`;
+}
+
+/** 三數連除直式：先 ÷d1 再 ÷d2（整除，只寫最終商） */
+function verticalDivChainHtml(dividend, d1, d2, { showAnswer = false, answer = "" } = {}) {
+  const ans = showAnswer
+    ? `<span class="valg-ans-text">${escapeHtml(String(answer))}</span>`
+    : `<span class="blank blank-valg blank-valg-div" aria-label="填空"></span>`;
+  return `<span class="valg valg-div-chain" title="${dividend} ÷ ${d1} ÷ ${d2}">
+    <span class="valg-div-chain-step">
+      <span class="valg-quot"><span class="blank blank-valg blank-valg-mid" aria-label="中間商"></span></span>
+      <span class="valg-div-body">
+        <span class="valg-divisor">${d1}</span>
+        <span class="valg-dividend">${dividend}</span>
+      </span>
+    </span>
+    <span class="valg-chain-next"><span class="valg-sign">÷</span>${d2} = ${ans}</span>
   </span>`;
 }
 
@@ -129,13 +163,20 @@ function renderSheet(questions, meta) {
   const sheet = $("#sheet");
   const answers = $("#answer-sheet");
   const cols = Number($("#columns").value) || 3;
-  const extracurricular = !!(activeModeMeta() && activeModeMeta().extracurricular);
+  const modeM = activeModeMeta();
+  const advanced = !!(modeM && modeM.advanced);
+  const extracurricular = !!(modeM && modeM.extracurricular && !advanced);
+  const extraTag = advanced
+    ? '　<span class="tag-extra tag-advanced">進階課題</span>'
+    : extracurricular
+      ? '　<span class="tag-extra">課程外延展</span>'
+      : "";
 
   const header = `
     <header class="sheet-header">
       <div class="brand">WordBank 算術操練</div>
       <h1>${meta.title_zh}</h1>
-      <p class="edb">對應單位：${meta.edb}${extracurricular ? '　<span class="tag-extra">課程外延展</span>' : ""}</p>
+      <p class="edb">對應單位：${meta.edb}${extraTag}</p>
       <p class="mode-line">${meta.modeLabel}</p>
       <div class="meta-row">
         <span>姓名：______________</span>
@@ -147,7 +188,14 @@ function renderSheet(questions, meta) {
 
   const rows = Math.max(1, Math.ceil(questions.length / cols));
 
-  const isVertical = questions.some((q) => q.meta && (q.meta.layout === "vertical_mul" || q.meta.layout === "vertical_div"));
+  const isVertical = questions.some(
+    (q) =>
+      q.meta &&
+      (q.meta.layout === "vertical_mul" ||
+        q.meta.layout === "vertical_div" ||
+        q.meta.layout === "vertical_mul_chain" ||
+        q.meta.layout === "vertical_div_chain")
+  );
   const remainHint = questions.some(
     (q) => q.meta && (q.meta.remain || q.meta.remainTemplate || q.meta.layout === "vertical_div")
   );
@@ -164,6 +212,19 @@ function renderSheet(questions, meta) {
               : ""
           }</span>`
         : "";
+      if (layout === "vertical_mul_chain") {
+        return `<div class="q has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalMulChainHtml(
+          q.meta.factors
+        )}</span></div>`;
+      }
+      if (layout === "vertical_div_chain") {
+        const [d1, d2] = q.meta.divisors;
+        return `<div class="q has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalDivChainHtml(
+          q.meta.dividend,
+          d1,
+          d2
+        )}</span></div>`;
+      }
       if (layout === "vertical_mul") {
         return `<div class="q has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalMulHtml(
           q.meta.top,
@@ -222,6 +283,21 @@ function renderSheet(questions, meta) {
   const aHtml = questions
     .map((q, i) => {
       const layout = q.meta && q.meta.layout;
+      if (layout === "vertical_mul_chain") {
+        return `<div class="q ans has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalMulChainHtml(
+          q.meta.factors,
+          { showAnswer: true, answer: q.answer }
+        )}</span></div>`;
+      }
+      if (layout === "vertical_div_chain") {
+        const [d1, d2] = q.meta.divisors;
+        return `<div class="q ans has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalDivChainHtml(
+          q.meta.dividend,
+          d1,
+          d2,
+          { showAnswer: true, answer: q.answer }
+        )}</span></div>`;
+      }
       if (layout === "vertical_mul") {
         return `<div class="q ans has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalMulHtml(
           q.meta.top,
@@ -274,7 +350,7 @@ function generate() {
   // 帶餘數模式：第 1 題作例題（顯示已填 商⋯餘）
   const remainExampleMode =
     modeId === "div_remain_0_10" ||
-    (family.id === "int_mul_div_vertical" && modeId.startsWith("div_"));
+    (family.id === "int_mul_div_vertical" && /^div_[23]by[12]$/.test(modeId));
   if (remainExampleMode && questions.length > 0) {
     const q0 = questions[0];
     questions[0] = {

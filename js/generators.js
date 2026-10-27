@@ -74,6 +74,8 @@ export const DRILL_CATALOG = [
       { id: "mul_3by2", label_zh: "4N1：三位數 × 兩位數（直式）" },
       { id: "div_2by2", label_zh: "4N2：兩位數 ÷ 兩位數（直式；可含餘數）" },
       { id: "div_3by2", label_zh: "4N2：三位數 ÷ 兩位數（直式；可含餘數）" },
+      { id: "mul_chain3", label_zh: "三數連乘直式（兩位×一位×一位）" },
+      { id: "div_chain3", label_zh: "三數連除直式（整除；÷一位÷一位）" },
     ],
   },
   {
@@ -89,12 +91,30 @@ export const DRILL_CATALOG = [
   },
   {
     id: "hcf_lcm",
-    title_zh: "兩數 H.C.F.／L.C.M.",
-    edb: "4N4",
+    title_zh: "H.C.F.／L.C.M.",
+    edb: "4N4（兩數）；三數＝進階",
     modes: [
-      { id: "hcf", label_zh: "求最大公因數（H.C.F.）" },
-      { id: "lcm", label_zh: "求最小公倍數（L.C.M.）" },
-      { id: "mixed", label_zh: "H.C.F.／L.C.M. 混合" },
+      { id: "hcf", label_zh: "兩數 H.C.F.（4N4）" },
+      { id: "lcm", label_zh: "兩數 L.C.M.（4N4）" },
+      { id: "mixed", label_zh: "兩數 H.C.F.／L.C.M. 混合（4N4）" },
+      {
+        id: "hcf_3",
+        label_zh: "三數 H.C.F.（進階課題）",
+        extracurricular: true,
+        advanced: true,
+      },
+      {
+        id: "lcm_3",
+        label_zh: "三數 L.C.M.（進階課題）",
+        extracurricular: true,
+        advanced: true,
+      },
+      {
+        id: "mixed_3",
+        label_zh: "三數 H.C.F.／L.C.M. 混合（進階課題）",
+        extracurricular: true,
+        advanced: true,
+      },
     ],
   },
   {
@@ -147,6 +167,10 @@ export const DRILL_CATALOG = [
       { id: "mul_dec_int", label_zh: "5N4：小數 × 整數（一位／兩位小數）" },
       { id: "mul_dec_dec", label_zh: "5N4：小數 × 小數（一位／兩位小數）" },
       { id: "div_general", label_zh: "6N1：小數除法四類（數位≤4N2）" },
+      {
+        id: "mixed_le4",
+        label_zh: "6N1.4：小數四則混合（≤4 個數；數位依 5N4／6N1）",
+      },
     ],
   },
   {
@@ -420,19 +444,62 @@ function genFactorsPrimes(rng, mode, count, opts = {}) {
 /* ---------- 5. HCF / LCM ---------- */
 function genHcfLcm(rng, mode, count, opts = {}) {
   const out = [];
+  const three =
+    mode === "hcf_3" || mode === "lcm_3" || mode === "mixed_3";
   for (let i = 0; i < count; i++) {
-    // keep numbers manageable for listing method (兩位數為主)
-    let a = randInt(rng, 4, 60);
-    let b = randInt(rng, 4, 60);
-    if (a === b) b = a + randInt(rng, 1, 5);
-    const h = gcd(a, b);
-    const l = lcm(a, b);
-    const want =
-      mode === "hcf" ? "hcf" : mode === "lcm" ? "lcm" : pick(rng, ["hcf", "lcm"]);
-    if (want === "hcf") {
-      out.push(q(`${a} 與 ${b} 的 H.C.F. = □`, h));
+    if (three) {
+      // 進階：三數；由公因數＋小倍數構造，使 L.C.M. 仍可用列舉法（非 4N4 必修）
+      const primes = [2, 3, 5, 7];
+      const h0 = pick(rng, [1, 2, 3, 4, 5, 6]);
+      let x = pick(rng, primes);
+      let y = pick(rng, primes);
+      let z = pick(rng, primes);
+      // 略增差異，避免三數常相同
+      if (rng() < 0.5) x *= pick(rng, [1, 2, 3]);
+      if (rng() < 0.5) y *= pick(rng, [1, 2, 3]);
+      if (rng() < 0.5) z *= pick(rng, [1, 2, 4]);
+      let a = h0 * x;
+      let b = h0 * y;
+      let c = h0 * z;
+      if (a === b && b === c) c = h0 * (z + 1);
+      // 上限：維持兩位數為主
+      a = Math.min(a, 96);
+      b = Math.min(b, 96);
+      c = Math.min(c, 96);
+      const h = gcd(gcd(a, b), c);
+      let l = lcm(lcm(a, b), c);
+      // 若 LCM 過大（列舉困難），縮小為共倍數較小的一組
+      if (l > 360) {
+        a = h0 * 2;
+        b = h0 * 3;
+        c = h0 * 4;
+        l = lcm(lcm(a, b), c);
+      }
+      const want =
+        mode === "hcf_3" ? "hcf" : mode === "lcm_3" ? "lcm" : pick(rng, ["hcf", "lcm"]);
+      if (want === "hcf") {
+        out.push(
+          q(`${a}、${b}、${c} 的 H.C.F. = □`, h, { advanced: true, nCount: 3 })
+        );
+      } else {
+        out.push(
+          q(`${a}、${b}、${c} 的 L.C.M. = □`, l, { advanced: true, nCount: 3 })
+        );
+      }
     } else {
-      out.push(q(`${a} 與 ${b} 的 L.C.M. = □`, l));
+      // 4N4：僅兩個數
+      let a = randInt(rng, 4, 60);
+      let b = randInt(rng, 4, 60);
+      if (a === b) b = a + randInt(rng, 1, 5);
+      const h = gcd(a, b);
+      const l = lcm(a, b);
+      const want =
+        mode === "hcf" ? "hcf" : mode === "lcm" ? "lcm" : pick(rng, ["hcf", "lcm"]);
+      if (want === "hcf") {
+        out.push(q(`${a} 與 ${b} 的 H.C.F. = □`, h, { nCount: 2 }));
+      } else {
+        out.push(q(`${a} 與 ${b} 的 L.C.M. = □`, l, { nCount: 2 }));
+      }
     }
   }
   return out;
@@ -805,7 +872,7 @@ function genDecMulDiv(rng, mode, count, opts = {}) {
           kind: mode,
         })
       );
-    } else {
+    } else if (mode === "div_general") {
       // div_general — 四類混合；構造整除／有限小數商，並通過 6N1 數位檢查
       const kind = pick(rng, ["dec_div_int", "int_div_dec", "dec_div_dec", "int_div_int"]);
       let dividend;
@@ -898,9 +965,152 @@ function genDecMulDiv(rng, mode, count, opts = {}) {
           kind: "div_general",
         })
       );
+    } else {
+      // mixed_le4 — 6N1.4：≤4 個數小數四則；×÷數位分別符合 5N4／6N1；圓括號不嵌套
+      const item = buildDecMixedLe4(rng, allowTrivial);
+      out.push(item);
     }
   }
   return out;
+}
+
+/** 精確乘：用十進位縮放 */
+function decMulExact(a, b) {
+  const ap = toDecParts(a);
+  const bp = toDecParts(b);
+  return fromDecParts(ap.int * bp.int, ap.places + bp.places, false);
+}
+
+/** 精確除（須能有限小數）；失敗回 null */
+function decDivExact(a, b) {
+  if (!b) return null;
+  const np = toDecParts(a);
+  const dp = toDecParts(b);
+  const scaleP = Math.max(np.places, dp.places);
+  const nInt = np.int * 10 ** (scaleP - np.places);
+  const dInt = dp.int * 10 ** (scaleP - dp.places);
+  if (!dInt) return null;
+  for (let extra = 0; extra <= 6; extra++) {
+    const n2 = nInt * 10 ** extra;
+    if (n2 % dInt === 0) return n2 / dInt / 10 ** extra;
+  }
+  return null;
+}
+
+function decAddExact(a, b) {
+  const ap = toDecParts(a);
+  const bp = toDecParts(b);
+  const p = Math.max(ap.places, bp.places);
+  const ai = ap.int * 10 ** (p - ap.places);
+  const bi = bp.int * 10 ** (p - bp.places);
+  return fromDecParts(ai + bi, p, false);
+}
+
+function decSubExact(a, b) {
+  const ap = toDecParts(a);
+  const bp = toDecParts(b);
+  const p = Math.max(ap.places, bp.places);
+  const ai = ap.int * 10 ** (p - ap.places);
+  const bi = bp.int * 10 ** (p - bp.places);
+  if (ai < bi) return null;
+  return fromDecParts(ai - bi, p, false);
+}
+
+function randMixedDecOperand(rng, allowTrivial) {
+  if (rng() < 0.4) {
+    let n = randInt(rng, allowTrivial ? 0 : 2, 24);
+    if (!allowTrivial && n <= 1) n = randInt(rng, 2, 12);
+    return n;
+  }
+  return randDec1or2(rng, { minDigits: 1, maxDigits: 2 });
+}
+
+function buildDecMixedLe4(rng, allowTrivial) {
+  const forms = [
+    "mul_add",
+    "add_mul",
+    "mul_sub",
+    "paren_mul",
+    "div_add",
+    "mul_div_add",
+    "two_mul_add",
+    "paren_add_mul",
+  ];
+  for (let guard = 0; guard < 80; guard++) {
+    const form = pick(rng, forms);
+    let a = randMixedDecOperand(rng, allowTrivial);
+    let b = randMixedDecOperand(rng, allowTrivial);
+    let c = randMixedDecOperand(rng, allowTrivial);
+    let d = randMixedDecOperand(rng, allowTrivial);
+    let prompt;
+    let ans;
+    if (form === "mul_add") {
+      if (!mulDecDigitsOk(a, b)) continue;
+      const prod = decMulExact(a, b);
+      ans = decAddExact(prod, c);
+      if (ans == null) continue;
+      prompt = `${formatDecAnswer(a)} × ${formatDecAnswer(b)} + ${formatDecAnswer(c)} = □`;
+    } else if (form === "add_mul") {
+      if (!mulDecDigitsOk(b, c)) continue;
+      const prod = decMulExact(b, c);
+      ans = decAddExact(a, prod);
+      if (ans == null) continue;
+      prompt = `${formatDecAnswer(a)} + ${formatDecAnswer(b)} × ${formatDecAnswer(c)} = □`;
+    } else if (form === "mul_sub") {
+      if (!mulDecDigitsOk(a, b)) continue;
+      const prod = decMulExact(a, b);
+      ans = decSubExact(prod, c);
+      if (ans == null) continue;
+      prompt = `${formatDecAnswer(a)} × ${formatDecAnswer(b)} − ${formatDecAnswer(c)} = □`;
+    } else if (form === "paren_mul") {
+      const sum = decAddExact(a, b);
+      if (sum == null || !mulDecDigitsOk(sum, c)) continue;
+      ans = decMulExact(sum, c);
+      prompt = `(${formatDecAnswer(a)} + ${formatDecAnswer(b)}) × ${formatDecAnswer(c)} = □`;
+    } else if (form === "div_add") {
+      // 構造 a = quot * b，使 a÷b 整除
+      const quot = randDec1or2(rng, { minDigits: 1, maxDigits: 2, forcePlaces: 1 });
+      b = randInt(rng, 2, 12);
+      a = decMulExact(quot, b);
+      if (!divDecDigitsOk(a, b)) continue;
+      const qv = decDivExact(a, b);
+      if (qv == null) continue;
+      ans = decAddExact(qv, c);
+      if (ans == null) continue;
+      prompt = `${formatDecAnswer(a)} ÷ ${formatDecAnswer(b)} + ${formatDecAnswer(c)} = □`;
+    } else if (form === "mul_div_add") {
+      // a × b ÷ c + d ；先保證 a×b 合規，再 ÷c 有限
+      if (!mulDecDigitsOk(a, b)) continue;
+      const prod = decMulExact(a, b);
+      c = randInt(rng, 2, 9);
+      if (!divDecDigitsOk(prod, c)) continue;
+      const qv = decDivExact(prod, c);
+      if (qv == null) continue;
+      ans = decAddExact(qv, d);
+      if (ans == null) continue;
+      prompt = `${formatDecAnswer(a)} × ${formatDecAnswer(b)} ÷ ${formatDecAnswer(c)} + ${formatDecAnswer(d)} = □`;
+    } else if (form === "two_mul_add") {
+      if (!mulDecDigitsOk(a, b) || !mulDecDigitsOk(c, d)) continue;
+      const p1 = decMulExact(a, b);
+      const p2 = decMulExact(c, d);
+      ans = decAddExact(p1, p2);
+      if (ans == null) continue;
+      prompt = `${formatDecAnswer(a)} × ${formatDecAnswer(b)} + ${formatDecAnswer(c)} × ${formatDecAnswer(d)} = □`;
+    } else {
+      // paren_add_mul: (a + b) × c + d
+      const sum = decAddExact(a, b);
+      if (sum == null || !mulDecDigitsOk(sum, c)) continue;
+      const prod = decMulExact(sum, c);
+      ans = decAddExact(prod, d);
+      if (ans == null) continue;
+      prompt = `(${formatDecAnswer(a)} + ${formatDecAnswer(b)}) × ${formatDecAnswer(c)} + ${formatDecAnswer(d)} = □`;
+    }
+    if (ans == null || !Number.isFinite(ans)) continue;
+    if (!allowTrivial && isTrivialPrompt(prompt)) continue;
+    return q(prompt, formatDecAnswer(ans), { kind: "mixed_le4" });
+  }
+  // 安全後備（已知合規）：1.2 × 3 + 0.4 = 4
+  return q(`1.2 × 3 + 0.4 = □`, "4", { kind: "mixed_le4" });
 }
 
 /* ---------- 12. 四則混合（無嵌套括號） ---------- */
@@ -971,6 +1181,60 @@ function genIntMulDivVertical(rng, mode, count, opts = {}) {
   const allowTrivial = !!opts.allowTrivial;
   const out = [];
   for (let i = 0; i < count; i++) {
+    if (mode === "mul_chain3") {
+      // 三數連乘：兩位數 × 一位數 × 一位數（對齊 3N2 位數精神）
+      let a = randInt(rng, 12, 99);
+      let b = allowTrivial ? randInt(rng, 0, 9) : randInt(rng, 2, 9);
+      let c = allowTrivial ? randInt(rng, 0, 9) : randInt(rng, 2, 9);
+      if (!allowTrivial && (b <= 1)) b = 2;
+      if (!allowTrivial && (c <= 1)) c = 2;
+      const prod = a * b * c;
+      out.push(
+        q(`${a} × ${b} × ${c} = □`, prod, {
+          layout: "vertical_mul_chain",
+          factors: [a, b, c],
+          product: prod,
+        })
+      );
+      continue;
+    }
+    if (mode === "div_chain3") {
+      // 三數連除：整除；被除數兩／三位數 ÷ 一位 ÷ 一位
+      let d1 = allowTrivial ? randInt(rng, 2, 9) : randInt(rng, 2, 9);
+      let d2 = allowTrivial ? randInt(rng, 2, 9) : randInt(rng, 2, 9);
+      let finalQ = randInt(rng, 2, 24);
+      let mid = finalQ * d2;
+      let dividend = mid * d1;
+      let guard = 0;
+      while ((dividend < 10 || dividend > 999) && guard < 40) {
+        d1 = randInt(rng, 2, 9);
+        d2 = randInt(rng, 2, 9);
+        finalQ = randInt(rng, 2, 20);
+        mid = finalQ * d2;
+        dividend = mid * d1;
+        guard++;
+      }
+      if (dividend < 10 || dividend > 999) {
+        d1 = 3;
+        d2 = 4;
+        finalQ = 6;
+        mid = 24;
+        dividend = 72;
+      }
+      out.push(
+        q(`${dividend} ÷ ${d1} ÷ ${d2} = □`, finalQ, {
+          layout: "vertical_div_chain",
+          dividend,
+          divisors: [d1, d2],
+          mid,
+          quotient: finalQ,
+          remainder: 0,
+          remain: false,
+          remainTemplate: false,
+        })
+      );
+      continue;
+    }
     if (mode === "mul_2by1" || mode === "mul_3by1" || mode === "mul_2by2" || mode === "mul_3by2") {
       let a;
       let b;
@@ -1082,16 +1346,23 @@ function genIntMulDivVertical(rng, mode, count, opts = {}) {
           guard++;
         }
       }
+      const useRemainTpl = rem > 0;
       out.push(
-        q(`${dividend} ÷ ${divisor} = □⋯□`, formatQuotRem(quot, rem), {
-          layout: "vertical_div",
-          dividend,
-          divisor,
-          quotient: quot,
-          remainder: rem,
-          remain: rem > 0,
-          remainTemplate: true,
-        })
+        q(
+          useRemainTpl
+            ? `${dividend} ÷ ${divisor} = □⋯□`
+            : `${dividend} ÷ ${divisor} = □`,
+          formatQuotRem(quot, rem),
+          {
+            layout: "vertical_div",
+            dividend,
+            divisor,
+            quotient: quot,
+            remainder: rem,
+            remain: rem > 0,
+            remainTemplate: useRemainTpl,
+          }
+        )
       );
     }
   }
