@@ -1,6 +1,6 @@
 /**
- * WordBank arithmetic generators — EDB constraints from edb-primary-arithmetic-map.
- * 橫式心算為主；整數乘除直式另族（無應用題）。
+ * Arithmetic worksheet generators — EDB constraints from edb-primary-arithmetic-map.
+ * 橫式心算為主；直式得數練習另族（無應用題）。
  */
 import { randInt, pick, shuffle } from "./rng.js";
 import {
@@ -63,19 +63,19 @@ export const DRILL_CATALOG = [
   },
   {
     id: "int_mul_div_vertical",
-    title_zh: "整數乘除直式",
+    title_zh: "直式得數練習",
     edb: "3N2, 3N3, 4N1, 4N2",
     modes: [
-      { id: "mul_2by1", label_zh: "3N2：兩位數 × 一位數（直式）" },
-      { id: "mul_3by1", label_zh: "3N2：三位數 × 一位數（直式）" },
-      { id: "div_2by1", label_zh: "3N3：兩位數 ÷ 一位數（直式；可含餘數）" },
-      { id: "div_3by1", label_zh: "3N3：三位數 ÷ 一位數（直式；可含餘數）" },
-      { id: "mul_2by2", label_zh: "4N1：兩位數 × 兩位數（直式）" },
-      { id: "mul_3by2", label_zh: "4N1：三位數 × 兩位數（直式）" },
-      { id: "div_2by2", label_zh: "4N2：兩位數 ÷ 兩位數（直式；可含餘數）" },
-      { id: "div_3by2", label_zh: "4N2：三位數 ÷ 兩位數（直式；可含餘數）" },
-      { id: "mul_chain3", label_zh: "三數連乘直式（兩位×一位×一位）" },
-      { id: "div_chain3", label_zh: "三數連除直式（整除；÷一位÷一位）" },
+      { id: "mul_2by1", label_zh: "3N2：兩位數 × 一位數" },
+      { id: "mul_3by1", label_zh: "3N2：三位數 × 一位數" },
+      { id: "div_2by1", label_zh: "3N3：兩位數 ÷ 一位數（可含餘數）" },
+      { id: "div_3by1", label_zh: "3N3：三位數 ÷ 一位數（可含餘數）" },
+      { id: "mul_2by2", label_zh: "4N1：兩位數 × 兩位數" },
+      { id: "mul_3by2", label_zh: "4N1：三位數 × 兩位數" },
+      { id: "div_2by2", label_zh: "4N2：兩位數 ÷ 兩位數（可含餘數）" },
+      { id: "div_3by2", label_zh: "4N2：三位數 ÷ 兩位數（可含餘數）" },
+      { id: "mul_chain3", label_zh: "三數連乘（兩位×一位×一位）" },
+      { id: "div_chain3", label_zh: "三數連除（整除；÷一位÷一位）" },
     ],
   },
   {
@@ -419,7 +419,7 @@ function genFactorsPrimes(rng, mode, count, opts = {}) {
       const n = base * k;
       const distract = rng() < 0.4 ? n + randInt(rng, 1, base - 1) : n;
       const yes = distract % base === 0;
-      out.push(q(`${distract} 是 ${base} 的倍數嗎？（是／否）`, yes ? "是" : "否"));
+      out.push(q(`${distract} 是 ${base} 的倍數嗎？`, yes ? "是" : "否", { choice: "yesno" }));
     } else if (mode === "is_prime") {
       // mix primes and composites under 100
       let n;
@@ -431,11 +431,11 @@ function genFactorsPrimes(rng, mode, count, opts = {}) {
           n = randInt(rng, 4, 99);
         } while (isPrime(n));
       }
-      out.push(q(`${n} 是質數嗎？（是／否）`, isPrime(n) ? "是" : "否"));
+      out.push(q(`${n} 是質數嗎？`, isPrime(n) ? "是" : "否", { choice: "yesno" }));
     } else {
       const d = pick(rng, [2, 3, 5, 10]);
       const n = randInt(rng, 10, 99);
-      out.push(q(`${n} 能被 ${d} 整除嗎？（是／否）`, n % d === 0 ? "是" : "否"));
+      out.push(q(`${n} 能被 ${d} 整除嗎？`, n % d === 0 ? "是" : "否", { choice: "yesno" }));
     }
   }
   return out;
@@ -683,9 +683,9 @@ function genFracDecConvert(rng, mode, count, opts = {}) {
           ? "f2d"
           : pick(rng, ["d2f", "f2d"]);
     if (dir === "d2f") {
-      out.push(q(`${dec} = □（最簡分數）`, simp));
+      out.push(q(`${dec} = □`, simp, { format: "frac", convert: true }));
     } else {
-      out.push(q(`${simp} = □（小數）`, dec));
+      out.push(q(`${simp} = □`, dec, { format: "dec", convert: true }));
     }
   }
   return out;
@@ -1166,7 +1166,7 @@ function genMixedOps(rng, mode, count, opts = {}) {
   return out;
 }
 
-/* ---------- 13. 整數乘除直式（3N2 / 3N3 / 4N1 / 4N2） ---------- */
+/* ---------- 13. 直式得數練習（3N2 / 3N3 / 4N1 / 4N2） ---------- */
 /** 答案：整除只寫商；有餘數寫「商⋯餘」（香港小學常見記法）。 */
 function formatQuotRem(quot, rem) {
   if (rem === 0) return String(quot);
@@ -1411,7 +1411,7 @@ function pctToFracAnswer(pctNum) {
   // 以千分之一百分比避免浮點：2.5 → 25/10
   const scaled = Math.round(pctNum * 10); // 一位小數足夠
   // pct/100 = (scaled/10)/100 = scaled/1000
-  return formatFrac(scaled, 1000, { allowMixed: true });
+  return formatFrac(scaled, 1000, { allowMixed: false });
 }
 
 function pctToDecAnswer(pctNum) {
@@ -1428,7 +1428,7 @@ function genPercentConvert(rng, mode, count, opts = {}) {
     const scaled = Math.round(pct * 10);
     const s = simplifyFrac(scaled, 1000);
     fracPctPairs.push({
-      frac: formatFrac(s.num, s.den, { allowMixed: true }),
+      frac: formatFrac(s.num, s.den, { allowMixed: false }),
       num: s.num,
       den: s.den,
       pct,
@@ -1445,25 +1445,29 @@ function genPercentConvert(rng, mode, count, opts = {}) {
     }
     if (dir === "pct_to_dec") {
       out.push(
-        q(`${item.pctLabel} = □（小數）`, item.dec, { kind: "pct_to_dec", pct: item.pct })
+        q(`${item.pctLabel} = □`, item.dec, { kind: "pct_to_dec", pct: item.pct, format: "dec", convert: true })
       );
     } else if (dir === "dec_to_pct") {
       out.push(
-        q(`${item.dec} = □（百分數）`, item.pctLabel, { kind: "dec_to_pct", pct: item.pct })
+        q(`${item.dec} = □`, item.pctLabel, { kind: "dec_to_pct", pct: item.pct, format: "pct", convert: true })
       );
     } else if (dir === "pct_to_frac") {
       out.push(
-        q(`${item.pctLabel} = □（最簡分數）`, item.frac, {
+        q(`${item.pctLabel} = □`, item.frac, {
           kind: "pct_to_frac",
           pct: item.pct,
+          format: "frac",
+          convert: true,
         })
       );
     } else {
       // frac_to_pct — 題幹用最簡（可帶）分數；答案為百分數
       out.push(
-        q(`${item.frac} = □（百分數）`, item.pctLabel, {
+        q(`${item.frac} = □`, item.pctLabel, {
           kind: "frac_to_pct",
           pct: item.pct,
+          format: "pct",
+          convert: true,
         })
       );
     }

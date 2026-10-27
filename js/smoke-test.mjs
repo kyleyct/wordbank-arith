@@ -498,6 +498,34 @@ for (const fam of DRILL_CATALOG) {
       }
     }
 
+
+    // P0 UX: 題幹不應再逐題括註形式；是非題用 choice:yesno
+    for (const q of qs) {
+      if (/（最簡分數）|（小數）|（百分數）|（是／否）/.test(q.prompt)) {
+        console.error("per-item format hint still in stem", fam.id, mode.id, q.prompt);
+        failures++;
+        break;
+      }
+    }
+    if (fam.id === "factors_primes" && (mode.id === "is_multiple" || mode.id === "is_prime" || mode.id === "divisibility")) {
+      for (const q of qs) {
+        if (!q.meta || q.meta.choice !== "yesno") {
+          console.error("yes/no item missing choice:yesno", q);
+          failures++;
+          break;
+        }
+        if (q.answer !== "是" && q.answer !== "否") {
+          console.error("yes/no answer must be 是/否", q);
+          failures++;
+          break;
+        }
+      }
+    }
+    if (fam.id === "int_mul_div_vertical" && fam.title_zh !== "直式得數練習") {
+      console.error("vertical family title should be 直式得數練習", fam.title_zh);
+      failures++;
+    }
+
     const rng2 = createRng(seed);
     const qs2 = generateQuestions(fam.id, mode.id, rng2, 48, { allowTrivial: false });
     if (JSON.stringify(qs) !== JSON.stringify(qs2)) {

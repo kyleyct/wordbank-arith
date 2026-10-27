@@ -13,6 +13,7 @@ function fillSelects() {
     fam.appendChild(opt);
   }
   fam.addEventListener("change", syncModes);
+  $("#mode").addEventListener("change", syncModeHint);
   syncModes();
 }
 
@@ -28,12 +29,50 @@ function syncModes() {
     else opt.textContent = m.label_zh;
     mode.appendChild(opt);
   }
+  const hint = $("#layout-hint");
   // 直式題較佔高：預設改為 2 欄、約 24 題（使用者仍可手動改）
   if (f.id === "int_mul_div_vertical") {
+    const prevCols = $("#columns").value;
+    const prevCount = $("#count").value;
     $("#columns").value = "2";
     const c = Number($("#count").value);
     if (!Number.isFinite(c) || c >= 40) $("#count").value = "24";
+    const changed = prevCols !== "2" || String(prevCount) !== String($("#count").value);
+    // 供 syncModeHint 讀取：剛做了自動調整
+    if (hint) hint.dataset.autoLayout = changed ? "1" : "0";
+  } else if (hint) {
+    hint.dataset.autoLayout = "0";
   }
+  syncModeHint();
+}
+
+function syncModeHint() {
+  const hint = $("#layout-hint");
+  if (!hint) return;
+  const f = getFamily($("#family").value);
+  const modeId = $("#mode").value;
+  if (f.id === "int_mul_div_vertical") {
+    const auto = hint.dataset.autoLayout === "1";
+    const base = auto
+      ? "已自動調整為 2 欄、約 24 題（直式得數較佔版面；可手動改回）。"
+      : "直式得數練習建議 2 欄、約 24 題（可手動調整）。";
+    let extra = "";
+    if (/^div_[23]by[12]$/.test(modeId)) {
+      extra = "　除法：第 1 題為例題；整除只寫商，有餘數填「商⋯餘」。";
+    } else if (modeId === "div_chain3") {
+      extra = "　連除：題面只填最終商；答案頁列中間商。";
+    }
+    hint.hidden = false;
+    hint.textContent = base + extra;
+    return;
+  }
+  if (f.id === "mult_div_table" && modeId === "div_remain_0_10") {
+    hint.hidden = false;
+    hint.textContent = "帶餘數模式：第 1 題為例題（示範「商⋯餘」寫法）。";
+    return;
+  }
+  hint.hidden = true;
+  hint.textContent = "";
 }
 
 function activeModeMeta() {
@@ -50,7 +89,8 @@ function looksLikeFraction(s) {
 
 function fracHtml(num, den, neg = false) {
   const sign = neg ? '<span class="frac-neg">−</span>' : "";
-  return `${sign}<span class="frac" title="${num}/${den}"><span class="frac-num">${num}</span><span class="frac-bar" aria-hidden="true"></span><span class="frac-den">${den}</span></span>`;
+  // title 用全形「／」，避免後續 \d+/\d+ 正則誤傷屬性
+  return `${sign}<span class="frac" title="${num}／${den}"><span class="frac-num">${num}</span><span class="frac-bar" aria-hidden="true"></span><span class="frac-den">${den}</span></span>`;
 }
 
 function mixedHtml(whole, num, den, neg = false) {
@@ -86,20 +126,36 @@ function verticalMulChainHtml(factors, { showAnswer = false, answer = "" } = {})
   </span>`;
 }
 
-/** 三數連除直式：先 ÷d1 再 ÷d2（整除，只寫最終商） */
-function verticalDivChainHtml(dividend, d1, d2, { showAnswer = false, answer = "" } = {}) {
-  const ans = showAnswer
+/**
+ * 三數連除直式：題面只留最終得數空格；答案頁可顯示中間商。
+ * @param {{ showAnswer?: boolean, answer?: string, mid?: number|string }} [opts]
+ */
+function verticalDivChainHtml(dividend, d1, d2, { showAnswer = false, answer = "", mid = "" } = {}) {
+  const finalAns = showAnswer
     ? `<span class="valg-ans-text">${escapeHtml(String(answer))}</span>`
-    : `<span class="blank blank-valg blank-valg-div" aria-label="填空"></span>`;
+    : `<span class="blank blank-valg blank-valg-div" aria-label="最終得數"></span>`;
+  const midCell = showAnswer
+    ? `<span class="valg-ans-text valg-mid-ans" title="中間商">${escapeHtml(String(mid))}</span>`
+    : ""; // 題面不設中間空格，避免誤以為須交中間步
   return `<span class="valg valg-div-chain" title="${dividend} ÷ ${d1} ÷ ${d2}">
     <span class="valg-div-chain-step">
-      <span class="valg-quot"><span class="blank blank-valg blank-valg-mid" aria-label="中間商"></span></span>
+      <span class="valg-quot">${midCell}</span>
       <span class="valg-div-body">
         <span class="valg-divisor">${d1}</span>
         <span class="valg-dividend">${dividend}</span>
       </span>
     </span>
-    <span class="valg-chain-next"><span class="valg-sign">÷</span>${d2} = ${ans}</span>
+    <span class="valg-chain-next"><span class="valg-sign">÷</span>${d2} = ${finalAns}</span>
+  </span>`;
+}
+
+/** 是／否圈選（題面兩圈；答案頁標示正確項） */
+function yesNoHtml(answer, { showAnswer = false } = {}) {
+  const yesOn = showAnswer && answer === "是";
+  const noOn = showAnswer && answer === "否";
+  return `<span class="yn-choice" role="group" aria-label="是或否">
+    <span class="yn-opt${yesOn ? " yn-on" : ""}" aria-label="是">是</span>
+    <span class="yn-opt${noOn ? " yn-on" : ""}" aria-label="否">否</span>
   </span>`;
 }
 
@@ -141,14 +197,21 @@ function verticalDivHtml(dividend, divisor, { showAnswer = false, answer = "", r
 function formatMathHtml(s, { fracBlank = false } = {}) {
   let out = escapeHtml(s);
 
+  // 只在標籤外的文字替換分數，避免 title／屬性內的「n/d」被二次解析
+  function replaceInText(html, replacer) {
+    return html.replace(/(^|>)([^<]*)/g, (_, boundary, text) => boundary + replacer(text));
+  }
+
   // Mixed numbers first: optional minus + whole + proper fraction
-  out = out.replace(/([−-])?(\d+)\s+(\d+)\/(\d+)/g, (_, sign, whole, num, den) =>
-    mixedHtml(whole, num, den, !!sign)
+  out = replaceInText(out, (text) =>
+    text.replace(/([−-])?(\d+)\s+(\d+)\/(\d+)/g, (_, sign, whole, num, den) =>
+      mixedHtml(whole, num, den, !!sign)
+    )
   );
 
-  // Proper / improper inline fractions (skip if already inside HTML we emitted — we emit no raw /)
-  out = out.replace(/([−-])?(\d+)\/(\d+)/g, (_, sign, num, den) =>
-    fracHtml(num, den, !!sign)
+  // Proper / improper inline fractions
+  out = replaceInText(out, (text) =>
+    text.replace(/([−-])?(\d+)\/(\d+)/g, (_, sign, num, den) => fracHtml(num, den, !!sign))
   );
 
   // 帶餘數模板 □⋯□ → 雙格（先於單格 □ 替換）
@@ -157,6 +220,38 @@ function formatMathHtml(s, { fracBlank = false } = {}) {
   const blankClass = fracBlank ? "blank blank-frac" : "blank";
   out = out.replace(/□/g, `<span class="${blankClass}" aria-label="填空"></span>`);
   return out;
+}
+
+/** 頁首一次顯示的作答形式說明（題幹不再逐題括註） */
+function sheetFormatNotes(familyId, modeId, questions) {
+  const notes = [];
+  const formats = new Set(
+    questions.map((q) => q.meta && q.meta.format).filter(Boolean)
+  );
+  const hasYesNo = questions.some((q) => q.meta && q.meta.choice === "yesno");
+  const hasFracAns = questions.some((q) => looksLikeFraction(q.answer));
+  const convertOnly = questions.every((q) => q.meta && q.meta.convert) && questions.length > 0;
+
+  if (hasYesNo) notes.push("是非題：請圈選「是」或「否」。");
+  if (formats.has("frac") || (hasFracAns && !formats.has("dec") && !formats.has("pct"))) {
+    if (convertOnly) notes.push("答案寫最簡分數（互化專練：請依題目要求的形式）。");
+    else notes.push("分數答案以最簡為準；大於 1 時本頁採用帶分數。帶分數與假分數皆可（互化專練除外）。");
+  }
+  if (formats.has("dec")) notes.push("答案寫小數。");
+  if (formats.has("pct")) notes.push("答案寫百分數（可含 ％ 符號）。");
+  if (familyId === "int_mul_div_vertical") {
+    notes.push("直式得數練習：只填最終得數，無須寫出直式步驟。");
+    if (modeId === "div_chain3") {
+      notes.push("三數連除：題面只填最終商；答案頁另列中間商供自檢。");
+    }
+  }
+  if (familyId === "mult_div_table" && modeId === "div_remain_0_10") {
+    notes.push("帶餘數：填「商⋯餘」（第 1 題為例題）。");
+  }
+  if (familyId === "int_mul_div_vertical" && /^div_[23]by[12]$/.test(modeId)) {
+    notes.push("有餘數填「商⋯餘」；整除只寫商（第 1 題為例題）。");
+  }
+  return notes;
 }
 
 function renderSheet(questions, meta) {
@@ -171,13 +266,18 @@ function renderSheet(questions, meta) {
     : extracurricular
       ? '　<span class="tag-extra">課程外延展</span>'
       : "";
+  const formatNotes = sheetFormatNotes(meta.familyId, meta.modeId, questions);
+  const formatBlock = formatNotes.length
+    ? `<p class="format-note">${formatNotes.map(escapeHtml).join("　")}</p>`
+    : "";
 
   const header = `
     <header class="sheet-header">
-      <div class="brand">WordBank 算術操練</div>
+      <div class="brand">自學教材系列　算術自習基礎練習</div>
       <h1>${meta.title_zh}</h1>
       <p class="edb">對應單位：${meta.edb}${extraTag}</p>
       <p class="mode-line">${meta.modeLabel}</p>
+      ${formatBlock}
       <div class="meta-row">
         <span>姓名：______________</span>
         <span>日期：______________</span>
@@ -222,7 +322,8 @@ function renderSheet(questions, meta) {
         return `<div class="q has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalDivChainHtml(
           q.meta.dividend,
           d1,
-          d2
+          d2,
+          { mid: q.meta.mid }
         )}</span></div>`;
       }
       if (layout === "vertical_mul") {
@@ -246,11 +347,14 @@ function renderSheet(questions, meta) {
       }
       const fracAns = looksLikeFraction(q.answer) || looksLikeFraction(q.prompt);
       const remainAns = /□⋯□/.test(q.prompt) || /⋯/.test(String(q.answer)) || (q.meta && q.meta.remain);
+      const isYesNo = q.meta && q.meta.choice === "yesno";
       let qp;
       if (isEx && remainAns) {
         // 例題：直接顯示填好的 商⋯餘
         const filled = escapeHtml(String(q.prompt)).replace(/□⋯□/g, remainPairHtml({ example: true, answer: q.answer }));
         qp = filled;
+      } else if (isYesNo) {
+        qp = `${formatMathHtml(q.prompt)} ${yesNoHtml(q.answer, { showAnswer: false })}`;
       } else {
         qp = formatMathHtml(q.prompt, { fracBlank: looksLikeFraction(q.answer) });
       }
@@ -258,6 +362,7 @@ function renderSheet(questions, meta) {
         "q",
         fracAns ? "has-frac" : "",
         remainAns ? "has-remain" : "",
+        isYesNo ? "has-yn" : "",
         isEx ? "q-example" : "",
       ]
         .filter(Boolean)
@@ -267,7 +372,7 @@ function renderSheet(questions, meta) {
     .join("");
 
   const footerBits = [];
-  if (isVertical) footerBits.push("直式演算　自檢請見答案頁");
+  if (isVertical) footerBits.push("直式得數練習（只填得數）　自檢請見答案頁");
   else footerBits.push("橫式心算　約 10–15 秒／題　自檢請見答案頁");
   if (remainHint) {
     footerBits.push(
@@ -295,7 +400,7 @@ function renderSheet(questions, meta) {
           q.meta.dividend,
           d1,
           d2,
-          { showAnswer: true, answer: q.answer }
+          { showAnswer: true, answer: q.answer, mid: q.meta.mid }
         )}</span></div>`;
       }
       if (layout === "vertical_mul") {
@@ -313,6 +418,13 @@ function renderSheet(questions, meta) {
         )}</span></div>`;
       }
       const fracAns = looksLikeFraction(q.answer);
+      const isYesNo = q.meta && q.meta.choice === "yesno";
+      if (isYesNo) {
+        return `<div class="q ans has-yn"><span class="qn">${i + 1}.</span> <span class="qp">${yesNoHtml(
+          q.answer,
+          { showAnswer: true }
+        )}</span></div>`;
+      }
       const cls = fracAns ? "q ans has-frac" : "q ans";
       return `<div class="${cls}"><span class="qn">${i + 1}.</span> <span class="qp">${formatMathHtml(
         String(q.answer)
@@ -322,9 +434,10 @@ function renderSheet(questions, meta) {
 
   answers.innerHTML = `
     <header class="sheet-header">
-      <div class="brand">答案頁（自檢）</div>
+      <div class="brand">答案頁（自檢）　自學教材系列　算術自習基礎練習</div>
       <h1>${meta.title_zh}</h1>
       <p class="edb">種子：${meta.seed}　題數：${questions.length}</p>
+      ${formatBlock}
     </header>
     <div class="qgrid cols-${cols}${isVertical ? " qgrid-valg" : ""}" style="--rows:${rows}">${aHtml}</div>`;
 }
@@ -362,6 +475,8 @@ function generate() {
     title_zh: family.title_zh,
     edb: family.edb,
     modeLabel: modeMeta.label_zh,
+    familyId: family.id,
+    modeId,
     seed,
   });
   $("#workspace").hidden = false;

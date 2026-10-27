@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WordBank 算術操練｜香港小學數範疇</title>
+  <title>算術自習基礎練習｜自學教材系列｜香港小學數範疇</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -465,11 +465,73 @@
       .page:last-child { page-break-after: auto; }
       @page { size: A4 portrait; margin: 12mm; }
     }
+
+    .series-label {
+      margin: 0 0 0.15rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--teal);
+      letter-spacing: 0.06em;
+    }
+    .layout-hint {
+      margin: 0.6rem 0 0;
+      padding: 0.55rem 0.75rem;
+      background: #ecfeff;
+      border: 1px solid #99f6e4;
+      border-radius: 6px;
+      color: #0f766e;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    .format-note {
+      margin: 0.35rem 0 0.55rem;
+      padding: 0.35rem 0.5rem;
+      background: #f0fdfa;
+      border-left: 3px solid var(--teal);
+      font-size: 0.82rem;
+      color: #134e4a;
+      line-height: 1.4;
+    }
+    .yn-choice {
+      display: inline-flex;
+      align-items: center;
+      gap: 2.5mm;
+      margin-left: 1.5mm;
+      vertical-align: middle;
+    }
+    .yn-opt {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 9mm;
+      height: 9mm;
+      border: 2px solid var(--ink);
+      border-radius: 50%;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      background: #fff;
+    }
+    .yn-opt.yn-on {
+      background: #ccfbf1;
+      border-color: var(--teal);
+      box-shadow: inset 0 0 0 2px var(--teal);
+    }
+    .q.has-yn {
+      min-height: 12mm;
+      align-items: center;
+    }
+    .valg-mid-ans {
+      font-size: 0.85em;
+      color: var(--teal);
+    }
+
   </style>
 </head>
 <body>
   <div class="controls no-print">
-    <h1 class="app-title">WordBank 算術操練</h1>
+    <p class="series-label">自學教材系列</p>
+    <h1 class="app-title">算術自習基礎練習</h1>
     <p class="subtitle">香港小學數學科「數」範疇　定題心算工作紙（自檢答案）　對照 <code>edb-primary-arithmetic-map.md</code>
       · <a href="grades.html" style="color:var(--teal);font-weight:500">年級與課程對照</a>
     </p>
@@ -500,8 +562,9 @@
         <button type="button" id="btn-new-seed">換種子重產</button>
         <button type="button" id="btn-print">列印／PDF</button>
       </div>
+      <p id="layout-hint" class="layout-hint" hidden></p>
     </div>
-    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。表內除法分<strong>整除</strong>與<strong>帶餘數</strong>兩模式（帶餘數題面為「□⋯□」雙格；第 1 題為例題）；「整數乘除直式」含 3N2／3N3／4N1／4N2 及三數連乘／連除直式。「小數乘除」含 <strong>6N1.4</strong> 小數四則混合（≤4 個數）。「三數 H.C.F.／L.C.M.」標為<strong>進階課題</strong>（4N4 必修僅兩數，三數非課標要求）。「百分數互化」僅對應 <strong>6N3</strong>，<strong>不含 6N4 應用題</strong>。</p>
+    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。表內除法分<strong>整除</strong>與<strong>帶餘數</strong>兩模式（帶餘數題面為「□⋯□」雙格；第 1 題為例題）；「直式得數練習」含 3N2／3N3／4N1／4N2 及三數連乘／連除。「小數乘除」含 <strong>6N1.4</strong> 小數四則混合（≤4 個數）。「三數 H.C.F.／L.C.M.」標為<strong>進階課題</strong>（4N4 必修僅兩數，三數非課標要求）。「百分數互化」僅對應 <strong>6N3</strong>，<strong>不含 6N4 應用題</strong>。</p>
   </div>
 
   <p id="empty-hint">請按「產生工作紙」。</p>
