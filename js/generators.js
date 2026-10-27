@@ -33,7 +33,7 @@ export const DRILL_CATALOG = [
     modes: [
       { id: "table_0_10", label_zh: "乘法表 0–10（課程要求）" },
       { id: "div_exact_0_10", label_zh: "表內整除除法（無餘數）" },
-      { id: "div_remain_0_10", label_zh: "表內帶餘數除法（商⋯餘；必有餘數）" },
+      { id: "div_remain_0_10", label_zh: "表內帶餘數除法（填 商⋯餘；必有餘數）" },
       { id: "mixed_0_10", label_zh: "乘除混合（0–10；整除）" },
       {
         id: "challenge_11_12",
@@ -242,7 +242,7 @@ function genMultDiv(rng, mode, count, opts = {}) {
       const rem = randInt(rng, 1, d - 1);
       const dividend = d * quot + rem;
       out.push(
-        q(`${dividend} ÷ ${d} = □（商⋯餘）`, `${quot}⋯${rem}`, {
+        q(`${dividend} ÷ ${d} = □⋯□`, `${quot}⋯${rem}`, {
           remain: true,
           quotient: quot,
           remainder: rem,
@@ -1083,13 +1083,14 @@ function genIntMulDivVertical(rng, mode, count, opts = {}) {
         }
       }
       out.push(
-        q(`${dividend} ÷ ${divisor} = □`, formatQuotRem(quot, rem), {
+        q(`${dividend} ÷ ${divisor} = □⋯□`, formatQuotRem(quot, rem), {
           layout: "vertical_div",
           dividend,
           divisor,
           quotient: quot,
           remainder: rem,
           remain: rem > 0,
+          remainTemplate: true,
         })
       );
     }

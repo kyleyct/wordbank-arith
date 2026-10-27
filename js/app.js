@@ -69,11 +69,25 @@ function verticalMulHtml(top, bottom, { showAnswer = false, answer = "" } = {}) 
   </span>`;
 }
 
-/** Schoolbook long-division bracket; blank for 商（⋯餘）. */
-function verticalDivHtml(dividend, divisor, { showAnswer = false, answer = "" } = {}) {
-  const ans = showAnswer
-    ? `<span class="valg-ans-text">${escapeHtml(String(answer))}</span>`
-    : `<span class="blank blank-valg blank-valg-div" aria-label="填空"></span>`;
+/** 「商⋯餘」雙格模板（橫式／直式共用）。 */
+function remainPairHtml({ showAnswer = false, answer = "", example = false } = {}) {
+  if (showAnswer || example) {
+    const text = escapeHtml(String(answer));
+    return `<span class="remain-pair remain-pair-filled" aria-label="${text}"><span class="remain-filled">${text}</span></span>`;
+  }
+  return `<span class="remain-pair" aria-label="商⋯餘"><span class="blank blank-remain" aria-label="商"></span><span class="remain-dots" aria-hidden="true">⋯</span><span class="blank blank-remain" aria-label="餘"></span></span>`;
+}
+
+/** Schoolbook long-division bracket; quotient row uses 商⋯餘 template when remainTemplate. */
+function verticalDivHtml(dividend, divisor, { showAnswer = false, answer = "", remainTemplate = true } = {}) {
+  let ans;
+  if (showAnswer) {
+    ans = `<span class="valg-ans-text">${escapeHtml(String(answer))}</span>`;
+  } else if (remainTemplate) {
+    ans = remainPairHtml();
+  } else {
+    ans = `<span class="blank blank-valg blank-valg-div" aria-label="填空"></span>`;
+  }
   return `<span class="valg valg-div" title="${dividend} ÷ ${divisor}">
     <span class="valg-quot">${ans}</span>
     <span class="valg-div-body">
@@ -103,6 +117,9 @@ function formatMathHtml(s, { fracBlank = false } = {}) {
     fracHtml(num, den, !!sign)
   );
 
+  // 帶餘數模板 □⋯□ → 雙格（先於單格 □ 替換）
+  out = out.replace(/□⋯□/g, remainPairHtml());
+
   const blankClass = fracBlank ? "blank blank-frac" : "blank";
   out = out.replace(/□/g, `<span class="${blankClass}" aria-label="填空"></span>`);
   return out;
@@ -131,11 +148,22 @@ function renderSheet(questions, meta) {
   const rows = Math.max(1, Math.ceil(questions.length / cols));
 
   const isVertical = questions.some((q) => q.meta && (q.meta.layout === "vertical_mul" || q.meta.layout === "vertical_div"));
-  const remainHint = questions.some((q) => q.meta && (q.meta.remain || q.meta.layout === "vertical_div"));
+  const remainHint = questions.some(
+    (q) => q.meta && (q.meta.remain || q.meta.remainTemplate || q.meta.layout === "vertical_div")
+  );
+  const hasExample = questions.some((q) => q.meta && q.meta.example);
 
   const qHtml = questions
     .map((q, i) => {
       const layout = q.meta && q.meta.layout;
+      const isEx = !!(q.meta && q.meta.example);
+      const exNote = isEx
+        ? `<span class="ex-note">例：寫作 <span class="ex-note-fmt">商⋯餘</span>${
+            q.meta && q.meta.remain === false
+              ? "；整除只寫商"
+              : ""
+          }</span>`
+        : "";
       if (layout === "vertical_mul") {
         return `<div class="q has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalMulHtml(
           q.meta.top,
@@ -143,25 +171,50 @@ function renderSheet(questions, meta) {
         )}</span></div>`;
       }
       if (layout === "vertical_div") {
-        return `<div class="q has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalDivHtml(
-          q.meta.dividend,
-          q.meta.divisor
-        )}</span></div>`;
+        const body = isEx
+          ? verticalDivHtml(q.meta.dividend, q.meta.divisor, {
+              showAnswer: true,
+              answer: q.answer,
+              remainTemplate: true,
+            })
+          : verticalDivHtml(q.meta.dividend, q.meta.divisor, {
+              remainTemplate: q.meta.remainTemplate !== false,
+            });
+        const cls = isEx ? "q has-valg q-example" : "q has-valg";
+        return `<div class="${cls}"><span class="qn">${i + 1}.</span> <span class="qp">${body}</span>${exNote}</div>`;
       }
       const fracAns = looksLikeFraction(q.answer) || looksLikeFraction(q.prompt);
-      const remainAns = /⋯/.test(String(q.answer)) || (q.meta && q.meta.remain);
-      const cls = fracAns ? "q has-frac" : remainAns ? "q has-remain" : "q";
-      return `<div class="${cls}"><span class="qn">${i + 1}.</span> <span class="qp">${formatMathHtml(
-        q.prompt,
-        { fracBlank: looksLikeFraction(q.answer) }
-      )}</span></div>`;
+      const remainAns = /□⋯□/.test(q.prompt) || /⋯/.test(String(q.answer)) || (q.meta && q.meta.remain);
+      let qp;
+      if (isEx && remainAns) {
+        // 例題：直接顯示填好的 商⋯餘
+        const filled = escapeHtml(String(q.prompt)).replace(/□⋯□/g, remainPairHtml({ example: true, answer: q.answer }));
+        qp = filled;
+      } else {
+        qp = formatMathHtml(q.prompt, { fracBlank: looksLikeFraction(q.answer) });
+      }
+      const cls = [
+        "q",
+        fracAns ? "has-frac" : "",
+        remainAns ? "has-remain" : "",
+        isEx ? "q-example" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return `<div class="${cls}"><span class="qn">${i + 1}.</span> <span class="qp">${qp}</span>${exNote}</div>`;
     })
     .join("");
 
   const footerBits = [];
   if (isVertical) footerBits.push("直式演算　自檢請見答案頁");
   else footerBits.push("橫式心算　約 10–15 秒／題　自檢請見答案頁");
-  if (remainHint) footerBits.push("帶餘數答案格式：商⋯餘（整除時只寫商）");
+  if (remainHint) {
+    footerBits.push(
+      hasExample
+        ? "第 1 題為例題；其餘題填「商⋯餘」（整除時只寫商）"
+        : "帶餘數填「商⋯餘」（整除時只寫商）"
+    );
+  }
 
   sheet.innerHTML = `${header}<div class="qgrid cols-${cols}${isVertical ? " qgrid-valg" : ""}" style="--rows:${rows}">${qHtml}</div>
     <footer class="sheet-footer">${footerBits.join("　")}</footer>`;
@@ -218,6 +271,17 @@ function generate() {
   const rng = createRng(seed);
   const allowTrivial = $("#allow-trivial").checked;
   const questions = generateQuestions(family.id, modeId, rng, count, { allowTrivial });
+  // 帶餘數模式：第 1 題作例題（顯示已填 商⋯餘）
+  const remainExampleMode =
+    modeId === "div_remain_0_10" ||
+    (family.id === "int_mul_div_vertical" && modeId.startsWith("div_"));
+  if (remainExampleMode && questions.length > 0) {
+    const q0 = questions[0];
+    questions[0] = {
+      ...q0,
+      meta: { ...(q0.meta || {}), example: true, remain: q0.meta?.remain !== false },
+    };
+  }
   renderSheet(questions, {
     title_zh: family.title_zh,
     edb: family.edb,

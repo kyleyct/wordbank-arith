@@ -104,6 +104,16 @@ for (const fam of DRILL_CATALOG) {
 
     if (fam.id === "mult_div_table" && mode.id === "div_remain_0_10") {
       for (const q of qs) {
+        if (/（商⋯餘）/.test(q.prompt)) {
+          console.error("awkward parenthetical remain prompt", q.prompt);
+          failures++;
+          break;
+        }
+        if (!/□⋯□/.test(q.prompt)) {
+          console.error("remain prompt should use □⋯□ template", q.prompt);
+          failures++;
+          break;
+        }
         if (!/⋯/.test(String(q.answer))) {
           console.error("remain mode missing ⋯", q);
           failures++;

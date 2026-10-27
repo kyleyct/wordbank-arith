@@ -271,6 +271,53 @@
     .q.has-remain {
       min-height: 14mm;
     }
+    .q.q-example {
+      background: #f0fdfa;
+      border-bottom: 1px solid #99f6e4;
+      border-radius: 4px;
+      padding-left: 1mm;
+      padding-right: 1mm;
+      flex-wrap: wrap;
+      align-items: center;
+      row-gap: 0.8mm;
+    }
+    .q.q-example .ex-note {
+      flex-basis: 100%;
+      margin-left: 2.1em;
+      font-size: 0.78rem;
+      color: var(--teal);
+      font-weight: 600;
+    }
+    .ex-note-fmt {
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .remain-pair {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5mm;
+      vertical-align: middle;
+      margin: 0 0.5mm;
+    }
+    .remain-dots {
+      font-weight: 700;
+      font-size: 1.05em;
+      line-height: 1;
+      padding: 0 0.4mm;
+      color: var(--ink);
+    }
+    .blank.blank-remain {
+      width: 9mm;
+      height: 10mm;
+      border-width: 2px;
+    }
+    .remain-pair-filled .remain-filled {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      padding: 0 1mm;
+      border-bottom: 2px solid var(--teal);
+    }
     .valg {
       display: inline-flex;
       flex-direction: column;
@@ -420,7 +467,7 @@
         <button type="button" id="btn-print">列印／PDF</button>
       </div>
     </div>
-    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。表內除法分<strong>整除</strong>與<strong>帶餘數（商⋯餘）</strong>兩模式；「整數乘除直式」另族（3N2／3N3／4N1／4N2），位數限制依課程地圖。「百分數互化」僅對應 <strong>6N3</strong>（百分↔小數／分數），<strong>不含 6N4 應用題</strong>。</p>
+    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。表內除法分<strong>整除</strong>與<strong>帶餘數</strong>兩模式（帶餘數題面為「□⋯□」雙格；第 1 題為例題）；「整數乘除直式」另族（3N2／3N3／4N1／4N2），位數限制依課程地圖。「百分數互化」僅對應 <strong>6N3</strong>（百分↔小數／分數），<strong>不含 6N4 應用題</strong>。</p>
   </div>
 
   <p id="empty-hint">請按「產生工作紙」。</p>
