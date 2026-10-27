@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WordBank 算術操練｜香港小學數範疇</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f7fbfb;
+      --ink: #121417;
+      --teal: #0d9488;
+      --pink: #ff2d7b;
+      --line: #d5e3e3;
+      --muted: #5a6570;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Noto Sans TC", "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.45;
+    }
+    .controls {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem 1.25rem 0.75rem;
+    }
+    .controls h1.app-title {
+      margin: 0 0 0.25rem;
+      font-size: 1.35rem;
+      color: var(--teal);
+    }
+    .controls .subtitle {
+      margin: 0 0 1rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.9rem;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    select, input {
+      font: inherit;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.4rem 0.5rem;
+      background: var(--bg);
+    }
+    .check-label .check-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      min-height: 2rem;
+      color: var(--ink);
+      font-weight: 400;
+    }
+    .check-label input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: end;
+    }
+    button {
+      font: inherit;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 0.9rem;
+      font-weight: 600;
+    }
+    #btn-generate { background: var(--teal); color: #fff; }
+    #btn-print { background: var(--ink); color: #fff; }
+    #btn-new-seed { background: #fff; color: var(--pink); border: 1px solid var(--pink); }
+    .honesty {
+      margin: 0.75rem 0 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .honesty strong { color: var(--pink); font-weight: 600; }
+    #empty-hint { text-align: center; padding: 2rem; color: var(--muted); }
+    #workspace { max-width: 210mm; margin: 1rem auto 2rem; }
+
+    /* —— Worksheet (screen + print) —— */
+    .page {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 12mm 12mm 10mm;
+      margin-bottom: 1rem;
+      min-height: 277mm;
+    }
+    .sheet-header h1 {
+      margin: 0.1rem 0;
+      font-size: 1.08rem;
+    }
+    .brand {
+      color: var(--teal);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+    }
+    .edb, .mode-line {
+      margin: 0.15rem 0;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .tag-extra {
+      display: inline-block;
+      background: #ffe5ef;
+      color: var(--pink);
+      font-size: 0.75rem;
+      padding: 0.05rem 0.4rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem 1.1rem;
+      margin-top: 0.35rem;
+      padding-top: 0.35rem;
+      border-top: 2px solid var(--teal);
+      font-size: 0.82rem;
+    }
+    .qgrid {
+      display: grid;
+      /* column-major: fill top→bottom, then next column (set --rows in JS) */
+      grid-auto-flow: column;
+      grid-template-rows: repeat(var(--rows, 16), auto);
+      gap: 1.4mm 4mm;
+      margin-top: 0.55rem;
+      align-content: start;
+    }
+    .qgrid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .qgrid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .q {
+      font-size: 1.02rem;
+      padding: 1.2mm 0.4mm 2.2mm;
+      min-height: 10mm;
+      border-bottom: 1px dotted var(--line);
+      break-inside: avoid;
+      display: flex;
+      align-items: center;
+      gap: 0.28rem;
+      line-height: 1.3;
+    }
+    .q.ans {
+      /* answer key: readable; slightly tighter (no handwriting needed) */
+      min-height: 7.5mm;
+      padding: 0.8mm 0.4mm 1.4mm;
+      font-size: 0.92rem;
+    }
+    .qn {
+      color: var(--teal);
+      font-weight: 600;
+      min-width: 1.8em;
+      flex-shrink: 0;
+    }
+    .qp { font-variant-numeric: tabular-nums; }
+    /* handwriting box — ~9×8mm for primary students (fits 48 on one A4) */
+    .blank {
+      display: inline-block;
+      width: 9mm;
+      height: 8mm;
+      border: 2px solid var(--ink);
+      border-radius: 3px;
+      vertical-align: middle;
+      margin: 0 1mm;
+      background: #fff;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+    .sheet-footer {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      padding-top: 0.4rem;
+    }
+    .answer-label {
+      text-align: center;
+      color: var(--pink);
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin: 0.5rem 0;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .controls, .no-print, #empty-hint { display: none !important; }
+      #workspace { margin: 0; max-width: none; }
+      .page {
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        margin: 0;
+        min-height: auto;
+        page-break-after: always;
+      }
+      .page:last-child { page-break-after: auto; }
+      @page { size: A4 portrait; margin: 12mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="controls no-print">
+    <h1 class="app-title">WordBank 算術操練</h1>
+    <p class="subtitle">香港小學數學科「數」範疇　定題心算工作紙（自檢答案）　對照 <code>edb-primary-arithmetic-map.md</code></p>
+    <div class="panel">
+      <label>操練族
+        <select id="family"></select>
+      </label>
+      <label>模式／關卡
+        <select id="mode"></select>
+      </label>
+      <label>題數（建議 40–60）
+        <input id="count" type="number" min="20" max="60" value="48" />
+      </label>
+      <label>欄數
+        <select id="columns">
+          <option value="3" selected>3 欄</option>
+          <option value="2">2 欄</option>
+        </select>
+      </label>
+      <label>隨機種子（可重現同一頁）
+        <input id="seed" type="text" placeholder="留空則自動" />
+      </label>
+      <label class="check-label">包含零／恆等題
+        <span class="check-row"><input id="allow-trivial" type="checkbox" /> <small>預設關閉＝較密練習</small></span>
+      </label>
+      <div class="actions">
+        <button type="button" id="btn-generate">產生工作紙</button>
+        <button type="button" id="btn-new-seed">換種子重產</button>
+        <button type="button" id="btn-print">列印／PDF</button>
+      </div>
+    </div>
+    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。</p>
+  </div>
+
+  <p id="empty-hint">請按「產生工作紙」。</p>
+
+  <div id="workspace" hidden>
+    <section id="sheet" class="page" aria-label="工作紙"></section>
+    <p class="answer-label no-print">—— 以下為答案頁（列印時接續第二頁）——</p>
+    <section id="answer-sheet" class="page" aria-label="答案頁"></section>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

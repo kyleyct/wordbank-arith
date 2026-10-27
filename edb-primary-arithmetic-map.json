@@ -1,0 +1,381 @@
+{
+  "meta": {
+    "title_zh": "香港小學數學科數範疇算術操練地圖",
+    "access_date": "2026-10-15",
+    "sources": [
+      {
+        "filename": "sources/pmc2017_tc.pdf",
+        "title_zh": "數學教育學習領域課程指引補充文件：小學數學科學習內容 (2017)",
+        "url": "https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/ma/curr/pmc2017_tc.pdf",
+        "lang": "tc"
+      },
+      {
+        "filename": "sources/EN_KS1_tc.pdf",
+        "title_zh": "小學數學課程闡釋（第一學習階段）(2018)",
+        "url": "https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/ma/curr/EN_KS1_tc.pdf",
+        "lang": "tc"
+      },
+      {
+        "filename": "sources/EN_KS2_tc.pdf",
+        "title_zh": "小學數學課程闡釋（第二學習階段）(2020)",
+        "url": "https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/ma/curr/EN_KS2_tc.pdf",
+        "lang": "tc"
+      }
+    ],
+    "index_url": "https://www.edb.gov.hk/tc/curriculum-development/kla/ma/curr/index2.html",
+    "notes_zh": "乘法表課程要求為 (0-10)，並非 12×12。單位代碼均摘自 pmc2017。"
+  },
+  "units": [
+    {
+      "unit_code": "1N1",
+      "title_zh": "20以內的數",
+      "ks": "KS1",
+      "year_hint": "P1",
+      "drill_families": ["addition_subtraction_within_10"],
+      "constraints": "入scope部分：認識2–18各數的分解與合成；口述及以文字／符號記錄（如12=4+8）。此處+、−、=並非作計算之用。數數、序數、奇偶 alone 不作生成器主線。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "1N2",
+      "title_zh": "基本加法和減法",
+      "ks": "KS1",
+      "year_hint": "P1",
+      "drill_families": ["addition_subtraction_within_10"],
+      "constraints": "進行18以內的加法和減法口算；橫式記錄；認識0的性質；加法交換性質（不須用詞）；加減關係。直式在1N4。應用題可略。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "1N3",
+      "title_zh": "100以內的數",
+      "ks": "KS1",
+      "year_hint": "P1",
+      "drill_families": [],
+      "constraints": "認數、個位十位、比較、分組數數、估計。非固定算術生成器主線。",
+      "priority": null,
+      "in_scope": false,
+      "out_of_scope_reason": "位值／認數為主"
+    },
+    {
+      "unit_code": "1N4",
+      "title_zh": "加法和減法(一)",
+      "ks": "KS1",
+      "year_hint": "P1",
+      "drill_families": ["addition_subtraction_within_100"],
+      "constraints": "兩個或三個數加法：不超過兩個位；須進位；結果須小於100。兩個數減法：不超過兩個位；不須涉及退位；以加法驗算。左至右運算；加法結合性質（不須用詞）；認識直式。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "2N1",
+      "title_zh": "三位數",
+      "ks": "KS1",
+      "year_hint": "P2",
+      "drill_families": [],
+      "constraints": "認數、百位、比較、估計（＜1000）。",
+      "priority": null,
+      "in_scope": false,
+      "out_of_scope_reason": "位值／認數為主"
+    },
+    {
+      "unit_code": "2N2",
+      "title_zh": "加法和減法(二)",
+      "ks": "KS1",
+      "year_hint": "P2",
+      "drill_families": ["addition_subtraction_within_1000", "addition_subtraction_within_100"],
+      "constraints": "≤3個數加法：≤三個位；進位；和＜1000。≤3個數減法：限不超過兩個位；須退位；左至右。可運用交換／結合性質加速加法。",
+      "priority": "P1",
+      "in_scope": true
+    },
+    {
+      "unit_code": "2N3",
+      "title_zh": "基本乘法",
+      "ks": "KS1",
+      "year_hint": "P2",
+      "drill_families": ["multiplication_tables_0_to_10"],
+      "constraints": "理解乘法表(0-10)（非12×12）。宜先編2–10表，後1與0；n×1=n；n×0=0。基本乘法；交換性質。香港小學必修上限為0–10。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "2N4",
+      "title_zh": "四位數",
+      "ks": "KS1",
+      "year_hint": "P2",
+      "drill_families": [],
+      "constraints": "認數、千位、比較。",
+      "priority": null,
+      "in_scope": false,
+      "out_of_scope_reason": "位值／認數為主"
+    },
+    {
+      "unit_code": "2N5",
+      "title_zh": "加法和減法(三)",
+      "ks": "KS1",
+      "year_hint": "P2",
+      "drill_families": ["addition_subtraction_within_1000"],
+      "constraints": "兩個數減法：≤三個位；退位。三個數加減混合：不超過三個位；左至右。",
+      "priority": "P1",
+      "in_scope": true
+    },
+    {
+      "unit_code": "2N6",
+      "title_zh": "基本除法",
+      "ks": "KS1",
+      "year_hint": "P2",
+      "drill_families": ["multiplication_tables_0_to_10"],
+      "constraints": "基本除法含餘數；乘除關係。例子應以乘法表(0-10)可解決為限。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "3N1",
+      "title_zh": "五位數",
+      "ks": "KS1",
+      "year_hint": "P3",
+      "drill_families": [],
+      "constraints": "認數、萬位、比較。",
+      "priority": null,
+      "in_scope": false,
+      "out_of_scope_reason": "位值／認數為主"
+    },
+    {
+      "unit_code": "3N2",
+      "title_zh": "乘法(一)",
+      "ks": "KS1",
+      "year_hint": "P3",
+      "drill_families": ["integer_mult_div_written"],
+      "constraints": "兩位數×一位數；三位數×一位數；三個數乘法；結合性質。非每日心算P0主線。",
+      "priority": "P1",
+      "in_scope": true
+    },
+    {
+      "unit_code": "3N3",
+      "title_zh": "除法(一)",
+      "ks": "KS1",
+      "year_hint": "P3",
+      "drill_families": ["integer_mult_div_written"],
+      "constraints": "兩位數÷一位數；三位數÷一位數；含餘數；三個數除法。",
+      "priority": "P1",
+      "in_scope": true
+    },
+    {
+      "unit_code": "3N4",
+      "title_zh": "四則運算(一)",
+      "ks": "KS1",
+      "year_hint": "P3",
+      "drill_families": ["four_operations_mixed"],
+      "constraints": "認識及運用圓括號。三個數加減混合（≤四個位）。≤四個數乘加／乘減混合；先乘後加減。可多於一對圓括號（如(2+3)×(5+3)）；不包括嵌套多重圓括號（如(4−(2−1))×3，屬初中）。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "3N5",
+      "title_zh": "分數(一)",
+      "ks": "KS1",
+      "year_hint": "P3",
+      "drill_families": ["fraction_add_sub_mul_div"],
+      "constraints": "分數概念（≤1）；等值分數（擴分約分在4N6）。同分母或同分子比較。不多於三個同分母分數加減；運算結果須不大於1。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "4N1",
+      "title_zh": "乘法(二)",
+      "ks": "KS2",
+      "year_hint": "P4",
+      "drill_families": ["integer_mult_div_written"],
+      "constraints": "兩位數×兩位數；三位數×兩位數。可運用交換／結合性質加速。",
+      "priority": "P1",
+      "in_scope": true
+    },
+    {
+      "unit_code": "4N2",
+      "title_zh": "除法(二)",
+      "ks": "KS2",
+      "year_hint": "P4",
+      "drill_families": ["integer_mult_div_written", "factors_multiples_hcf_lcm"],
+      "constraints": "兩位數÷兩位數；三位數÷兩位數。認識2、3、5、10的整除性；引入「整數」一詞。整除性支撐因數操練。",
+      "priority": "P1",
+      "in_scope": true
+    },
+    {
+      "unit_code": "4N3",
+      "title_zh": "倍數和因數",
+      "ks": "KS2",
+      "year_hint": "P4",
+      "drill_families": ["factors_multiples_hcf_lcm"],
+      "constraints": "倍數、因數、關係；求非零整數所有因數。質數與合成數；判別100以內是否質數；愛氏篩。不包括0的倍數和因數；所指的數僅限正整數。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "4N4",
+      "title_zh": "公倍數和公因數",
+      "ks": "KS2",
+      "year_hint": "P4",
+      "drill_families": ["factors_multiples_hcf_lcm"],
+      "constraints": "兩個數的公倍數、公因數、L.C.M.、H.C.F.（須認識簡稱）。列舉法與短除法。不要求三數LCM的列舉／短除；不要求兩數之積=H.C.F.×L.C.M.。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "4N5",
+      "title_zh": "四則運算(二)",
+      "ks": "KS2",
+      "year_hint": "P4",
+      "drill_families": ["four_operations_mixed"],
+      "constraints": "乘法分配性質（應用；不須用詞）。≤四個數：除加、除減、除乘混合。≤五個數四則混合。括號：可多對平行圓括號；禁止嵌套多重括號。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "4N6",
+      "title_zh": "分數(二)",
+      "ks": "KS2",
+      "year_hint": "P4",
+      "drill_families": ["fraction_add_sub_mul_div"],
+      "constraints": "真分數、假分數、帶分數；假分數↔帶分數；擴分、約分、最簡。≤三個同分母加減（可含整數）；三個同分母加減混合。結果可用最簡帶分數或假分數。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "4N7",
+      "title_zh": "小數(一)",
+      "ks": "KS2",
+      "year_hint": "P4",
+      "drill_families": ["fraction_decimal_conversion"],
+      "constraints": "小數與分數關係；十分位至萬分位；一至四位小數。比較整數、分母為100之因數的分數與小數。互化前置概念。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "4N8",
+      "title_zh": "小數(二)",
+      "ks": "KS2",
+      "year_hint": "P4",
+      "drill_families": ["decimal_add_sub_mul_div"],
+      "constraints": "≤三個數加減；三個數加減混合。僅一位或兩位小數；可含整數。數位數目不超過3N4整數加減規定（排除1.2345+5.6、123.4+56.78、1234−5.6等）。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "5N1",
+      "title_zh": "多位數",
+      "ks": "KS2",
+      "year_hint": "P5",
+      "drill_families": [],
+      "constraints": "認數、比較、四捨五入取近似值、估計大數量。",
+      "priority": null,
+      "in_scope": false,
+      "out_of_scope_reason": "位值／估算為主"
+    },
+    {
+      "unit_code": "5N2",
+      "title_zh": "分數(三)",
+      "ks": "KS2",
+      "year_hint": "P5",
+      "drill_families": ["fraction_add_sub_mul_div"],
+      "constraints": "≤三個異分母比較／加減／加減混合（可含整數）。三個異分母時分母皆不應超過12；避免繁複。通分可用任一共倍數；求三數LCM非課程所需。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "5N3",
+      "title_zh": "分數(四)",
+      "ks": "KS2",
+      "year_hint": "P5",
+      "drill_families": ["fraction_add_sub_mul_div"],
+      "constraints": "≤三個數乘法（分數與整數）。三個分數相乘不應涉及多於一個帶分數；避免繁複。結果最簡帶分或假分。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "5N4",
+      "title_zh": "小數(三)",
+      "ks": "KS2",
+      "year_hint": "P5",
+      "drill_families": ["decimal_add_sub_mul_div"],
+      "constraints": "×10/100/1000；×0.1/0.01/0.001；兩數乘法。一般小數乘法：一或兩位小數，數位不超過4N1（排除0.124×3.9等）。結果可≈至十分／百分位。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "5N5",
+      "title_zh": "分數(五)",
+      "ks": "KS2",
+      "year_hint": "P5",
+      "drill_families": ["fraction_add_sub_mul_div", "four_operations_mixed"],
+      "constraints": "分數為兩整數之商。≤三個數除法；三個數四則混合。三個分數的除法／乘除混合不多於一個帶分數；避免繁複。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "6N1",
+      "title_zh": "小數(四)",
+      "ks": "KS2",
+      "year_hint": "P6",
+      "drill_families": ["decimal_add_sub_mul_div", "four_operations_mixed"],
+      "constraints": "÷10/100/1000；÷0.1/0.01/0.001。小數÷整數、整數÷整數(商為小數)、整數÷小數、小數÷小數。一般除法數位不超過4N2。≤四個數小數四則混合；乘／除數位分別符合5N4／6N1。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "6N2",
+      "title_zh": "小數(五)",
+      "ks": "KS2",
+      "year_hint": "P6",
+      "drill_families": ["fraction_decimal_conversion"],
+      "constraints": "小數與分數互化：小數→分母10/100/1000之分數並約至最簡；分數→小數（除法或擴分）。可取近似至十分／百分位。不引入循環小數一詞（非小學所需）。",
+      "priority": "P0",
+      "in_scope": true
+    },
+    {
+      "unit_code": "6N3",
+      "title_zh": "百分數(一)",
+      "ks": "KS2",
+      "year_hint": "P6",
+      "drill_families": ["percent_conversion_optional"],
+      "constraints": "百分數概念；百分數↔小數；百分數↔分數。選配延展，非本輪P0主線。",
+      "priority": "P2",
+      "in_scope": true
+    },
+    {
+      "unit_code": "6N4",
+      "title_zh": "百分數(二)",
+      "ks": "KS2",
+      "year_hint": "P6",
+      "drill_families": ["percent_conversion_optional"],
+      "constraints": "簡易百分數與百分變化應用題為主；求原本的數在6A1。應用題非本階段主產品。",
+      "priority": "P2",
+      "in_scope": true
+    }
+  ],
+  "curriculum_honesty_notes": [
+    {
+      "topic": "multiplication_tables",
+      "edb_requirement": "乘法表 (0-10)",
+      "kyle_example": "9×9 and 12×12",
+      "mapping": "9×9／至10為課標子集可作P0；12×12無對應單位，標P2課程外延展"
+    },
+    {
+      "topic": "brackets",
+      "edb_requirement": "可多對平行圓括號；禁止嵌套多重圓括號",
+      "units": ["3N4", "4N5"]
+    },
+    {
+      "topic": "within_10_vs_18",
+      "edb_requirement": "1N2為18以內口算；1N1分解合成含2–18",
+      "mapping": "within_10為產品分級子集"
+    }
+  ],
+  "out_of_scope_strands_brief": [
+    "度量 (*M*)：長度、時間、貨幣、容量、重量、周界、面積、體積等",
+    "圖形與空間 (*S*)",
+    "數據處理 (*D*)",
+    "代數／方程 (*A*)",
+    "進階學習單位 (*F*)",
+    "各單位「解應用題」作為主生成器產品"
+  ]
+}

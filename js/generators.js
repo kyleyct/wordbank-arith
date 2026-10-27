@@ -1,0 +1,744 @@
+/**
+ * WordBank arithmetic P0 generators — EDB constraints from edb-primary-arithmetic-map.
+ * All questions are 橫式心算 style (no 應用題).
+ */
+import { randInt, pick, shuffle } from "./rng.js";
+import {
+  gcd,
+  lcm,
+  factorsOf,
+  isPrime,
+  formatFrac,
+  simplifyFrac,
+  subtractionNeedsBorrow,
+  additionNeedsCarry,
+} from "./math-utils.js";
+
+/** @typedef {{ prompt: string, answer: string, meta?: object }} Q */
+
+export const DRILL_CATALOG = [
+  {
+    id: "bonds_add_sub",
+    title_zh: "10／18 以內加減與分解",
+    edb: "1N1, 1N2",
+    modes: [
+      { id: "within10", label_zh: "關卡一：10 以內（分解＋加減）" },
+      { id: "within18", label_zh: "關卡二：18 以內（1N2 口算）" },
+    ],
+  },
+  {
+    id: "mult_div_table",
+    title_zh: "乘法表與整除除法",
+    edb: "2N3, 2N6",
+    modes: [
+      { id: "table_0_10", label_zh: "乘法表 0–10（課程要求）" },
+      { id: "div_exact_0_10", label_zh: "表內整除除法（無餘數）" },
+      { id: "mixed_0_10", label_zh: "乘除混合（0–10）" },
+      {
+        id: "challenge_11_12",
+        label_zh: "挑戰：11–12（課程外延展）",
+        extracurricular: true,
+      },
+    ],
+  },
+  {
+    id: "add_sub_within_100",
+    title_zh: "100 以內加減",
+    edb: "1N4 → 2N2/2N5 兩位子集",
+    modes: [
+      { id: "no_borrow", label_zh: "1N4：無退位（和＜100；可進位加）" },
+      { id: "with_borrow", label_zh: "退位減法／進位加法（兩位數，和＜100）" },
+    ],
+  },
+  {
+    id: "add_sub_within_1000",
+    title_zh: "1000 以內加減（三位數延展）",
+    edb: "2N2, 2N5",
+    modes: [
+      { id: "add_3digit", label_zh: "2N2：三位數加法（和＜1000）" },
+      { id: "sub_3digit", label_zh: "2N5：三位數退位減法" },
+      { id: "mixed_3", label_zh: "三數加減混合（≤三個位）" },
+    ],
+  },
+  {
+    id: "factors_primes",
+    title_zh: "因數／倍數／質數",
+    edb: "4N3, 4N2",
+    modes: [
+      { id: "list_factors", label_zh: "列出兩位數的所有因數" },
+      { id: "is_multiple", label_zh: "是否為某數的倍數" },
+      { id: "is_prime", label_zh: "100 以內是否質數" },
+      { id: "divisibility", label_zh: "整除性（2、3、5、10）" },
+    ],
+  },
+  {
+    id: "hcf_lcm",
+    title_zh: "兩數 H.C.F.／L.C.M.",
+    edb: "4N4",
+    modes: [
+      { id: "hcf", label_zh: "求最大公因數（H.C.F.）" },
+      { id: "lcm", label_zh: "求最小公倍數（L.C.M.）" },
+      { id: "mixed", label_zh: "H.C.F.／L.C.M. 混合" },
+    ],
+  },
+  {
+    id: "frac_same_den",
+    title_zh: "同分母分數加減",
+    edb: "3N5, 4N6",
+    modes: [
+      { id: "le1", label_zh: "3N5：結果不大於 1" },
+      { id: "improper_ok", label_zh: "4N6：可大於 1（最簡帶分／假分）" },
+    ],
+  },
+  {
+    id: "frac_unlike",
+    title_zh: "異分母分數加減",
+    edb: "5N2",
+    modes: [{ id: "den_le12", label_zh: "分母 ≤12；不多於三個分數" }],
+  },
+  {
+    id: "frac_mul_div",
+    title_zh: "分數乘除",
+    edb: "5N3, 5N5",
+    modes: [
+      { id: "mul", label_zh: "分數乘法（≤3 個數）" },
+      { id: "div", label_zh: "分數除法（≤3 個數）" },
+    ],
+  },
+  {
+    id: "dec_add_sub",
+    title_zh: "小數加減",
+    edb: "4N8",
+    modes: [{ id: "1_2dp", label_zh: "一位／兩位小數（≤3 個數）" }],
+  },
+  {
+    id: "frac_dec_convert",
+    title_zh: "分數 ↔ 小數互化",
+    edb: "4N7, 6N2",
+    modes: [
+      { id: "dec_to_frac", label_zh: "小數 → 最簡分數" },
+      { id: "frac_to_dec", label_zh: "分數 → 小數" },
+      { id: "mixed", label_zh: "互化混合" },
+    ],
+  },
+  {
+    id: "dec_mul_div",
+    title_zh: "小數乘除（簡易）",
+    edb: "5N4, 6N1",
+    modes: [
+      { id: "mul_powers", label_zh: "×10／100／0.1／0.01" },
+      { id: "div_powers", label_zh: "÷10／100／0.1／0.01" },
+    ],
+  },
+  {
+    id: "mixed_ops",
+    title_zh: "四則混合（含圓括號）",
+    edb: "3N4, 4N5",
+    modes: [
+      { id: "mul_add_sub", label_zh: "3N4：乘加／乘減（≤4 數；圓括號非嵌套）" },
+      { id: "four_ops", label_zh: "4N5：四則混合（≤5 數；圓括號非嵌套）" },
+    ],
+  },
+];
+
+function q(prompt, answer, meta) {
+  return { prompt, answer: String(answer), meta };
+}
+
+/* ---------- 1. 10/18 加減與分解 ---------- */
+function genBondsAddSub(rng, mode, count, opts = {}) {
+  const out = [];
+  const maxSum = mode === "within18" ? 18 : 10;
+  const allowTrivial = !!opts.allowTrivial;
+  for (let i = 0; i < count; i++) {
+    const kind = pick(rng, ["bond", "bond", "add", "sub", "missing"]);
+    if (kind === "bond") {
+      const total = randInt(rng, 2, maxSum);
+      let a;
+      if (allowTrivial) a = randInt(rng, 0, total);
+      else a = randInt(rng, 1, total - 1); // both parts ≥1
+      const b = total - a;
+      if (rng() < 0.5) out.push(q(`${total} = ${a} + □`, b));
+      else out.push(q(`${a} + □ = ${total}`, b));
+    } else if (kind === "add") {
+      let a, b;
+      if (allowTrivial) {
+        a = randInt(rng, 0, maxSum);
+        b = randInt(rng, 0, maxSum - a);
+      } else {
+        a = randInt(rng, 1, maxSum - 1);
+        b = randInt(rng, 1, maxSum - a);
+      }
+      out.push(q(`${a} + ${b} = □`, a + b));
+    } else if (kind === "sub") {
+      let a, b;
+      if (allowTrivial) {
+        a = randInt(rng, 0, maxSum);
+        b = randInt(rng, 0, a);
+      } else {
+        a = randInt(rng, 2, maxSum);
+        b = randInt(rng, 1, a - 1); // not n−n, not −0
+      }
+      out.push(q(`${a} − ${b} = □`, a - b));
+    } else {
+      const total = randInt(rng, allowTrivial ? 1 : 2, maxSum);
+      let a;
+      if (allowTrivial) a = randInt(rng, 0, total);
+      else a = randInt(rng, 1, total - 1);
+      const b = total - a;
+      if (rng() < 0.5) out.push(q(`${a} + □ = ${total}`, b));
+      else out.push(q(`□ + ${b} = ${total}`, a));
+    }
+  }
+  return out;
+}
+
+/* ---------- 2. 乘法表 / 除法 ---------- */
+function genMultDiv(rng, mode, count, opts = {}) {
+  const out = [];
+  const allowTrivial = !!opts.allowTrivial;
+  const hi = mode === "challenge_11_12" ? 12 : 10;
+  // denser default: factors 2..hi (skip 0/1 恆等)；開啟「包含零／恆等題」才用 0–hi
+  const factorLo = allowTrivial ? (mode === "challenge_11_12" ? 11 : 0) : 2;
+  const factorHi = hi;
+  const mulLo = mode === "challenge_11_12" ? 11 : factorLo;
+
+  for (let i = 0; i < count; i++) {
+    if (mode === "div_exact_0_10" || (mode === "mixed_0_10" && rng() < 0.45)) {
+      let d = allowTrivial ? randInt(rng, 1, 10) : randInt(rng, 2, 10);
+      let m = allowTrivial ? randInt(rng, 0, 10) : randInt(rng, 2, 10);
+      const product = d * m;
+      out.push(q(`${product} ÷ ${d} = □`, m));
+    } else if (mode === "challenge_11_12") {
+      const big = randInt(rng, 11, 12);
+      const small = allowTrivial ? randInt(rng, 0, 12) : randInt(rng, 2, 12);
+      const form = pick(rng, ["mul_a", "mul_b", "div"]);
+      if (form === "mul_a") out.push(q(`${big} × ${small} = □`, big * small));
+      else if (form === "mul_b") out.push(q(`${small} × ${big} = □`, big * small));
+      else out.push(q(`${big * small} ÷ ${big} = □`, small));
+    } else {
+      const a = randInt(rng, mulLo === 0 ? 0 : mulLo, factorHi);
+      const b = allowTrivial ? randInt(rng, 0, factorHi) : randInt(rng, 2, factorHi);
+      // if !allowTrivial ensure neither factor is 0 or 1
+      const aa = allowTrivial ? a : Math.max(2, a || 2);
+      const bb = allowTrivial ? b : Math.max(2, b);
+      out.push(q(`${aa} × ${bb} = □`, aa * bb));
+    }
+  }
+  return out;
+}
+
+/* ---------- 3. 100 以內（與 1000 嚴格分開） ---------- */
+function genWithin100(rng, mode, count, opts = {}) {
+  const out = [];
+  const allowTrivial = !!opts.allowTrivial;
+  const minOp = allowTrivial ? 0 : 1;
+  for (let i = 0; i < count; i++) {
+    const op = pick(rng, mode === "no_borrow" ? ["add", "add3", "sub"] : ["add", "sub"]);
+    if (op === "add" || op === "add3") {
+      let a, b, c;
+      let tries = 0;
+      do {
+        a = randInt(rng, minOp, 98);
+        const bMax = 99 - a;
+        b = randInt(rng, minOp, Math.max(minOp, bMax));
+        if (a + b > 99) continue;
+        tries++;
+      } while (
+        (mode === "with_borrow" && !additionNeedsCarry(a, b) && tries < 40) ||
+        (!allowTrivial && (a === 0 || b === 0) && tries < 40)
+      );
+      if (op === "add3" && mode === "no_borrow") {
+        const rem = 99 - a - b;
+        c = rem < minOp ? minOp : randInt(rng, minOp, Math.max(minOp, rem));
+        if (a + b + c > 99) c = Math.max(0, 99 - a - b);
+        if (!allowTrivial && c === 0 && rem >= 1) c = 1;
+        if (a + b + c <= 99) out.push(q(`${a} + ${b} + ${c} = □`, a + b + c));
+        else out.push(q(`${a} + ${b} = □`, a + b));
+      } else {
+        out.push(q(`${a} + ${b} = □`, a + b));
+      }
+    } else {
+      let a, b;
+      let tries = 0;
+      if (mode === "no_borrow") {
+        do {
+          a = randInt(rng, allowTrivial ? 0 : 2, 99);
+          b = randInt(rng, allowTrivial ? 0 : 1, allowTrivial ? a : Math.max(1, a - 1));
+          tries++;
+        } while (
+          (subtractionNeedsBorrow(a, b) || (!allowTrivial && (b === 0 || a === b))) &&
+          tries < 50
+        );
+      } else {
+        do {
+          a = randInt(rng, 10, 99);
+          b = randInt(rng, 1, a - (allowTrivial ? 0 : 1) || 1);
+          if (!allowTrivial && b >= a) b = a - 1;
+          tries++;
+        } while (
+          (!subtractionNeedsBorrow(a, b) || (!allowTrivial && (b === 0 || a === b))) &&
+          tries < 50
+        );
+      }
+      out.push(q(`${a} − ${b} = □`, a - b));
+    }
+  }
+  return out;
+}
+
+/* ---------- 3b. 1000 以內 — 獨立生成器 ---------- */
+function genWithin1000(rng, mode, count, opts = {}) {
+  const allowTrivial = !!opts.allowTrivial;
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    if (mode === "add_3digit") {
+      const minB = allowTrivial ? 0 : 1;
+      let a, b;
+      do {
+        a = randInt(rng, 100, 999);
+        b = randInt(rng, minB, Math.max(minB, 999 - a));
+      } while (a + b >= 1000 || (!allowTrivial && b === 0));
+      if (rng() < 0.35 && 999 - a - b >= minB) {
+        let c = randInt(rng, minB, Math.max(minB, 999 - a - b));
+        if (!allowTrivial && c === 0) c = minB;
+        out.push(q(`${a} + ${b} + ${c} = □`, a + b + c));
+      } else {
+        out.push(q(`${a} + ${b} = □`, a + b));
+      }
+    } else if (mode === "sub_3digit") {
+      let a, b;
+      let tries = 0;
+      do {
+        a = randInt(rng, 100, 999);
+        b = randInt(rng, 1, allowTrivial ? a : Math.max(1, a - 1));
+        tries++;
+      } while (
+        (!subtractionNeedsBorrow(a, b) || (!allowTrivial && a === b)) &&
+        tries < 40
+      );
+      out.push(q(`${a} − ${b} = □`, a - b));
+    } else {
+      const minV = allowTrivial ? 0 : 1;
+      const a = randInt(rng, minV, 999);
+      const b = randInt(rng, minV, Math.max(minV, Math.min(999, a - (allowTrivial ? 0 : 1))));
+      const mid = a - b;
+      const c = randInt(rng, minV, 999);
+      if (rng() < 0.5) {
+        out.push(q(`${a} − ${b} + ${c} = □`, mid + c));
+      } else {
+        const addFirst = randInt(rng, minV, 500);
+        const addSecond = randInt(rng, minV, Math.max(minV, 999 - addFirst));
+        const sub = randInt(rng, minV, Math.max(minV, addFirst + addSecond - (allowTrivial ? 0 : 1)));
+        out.push(q(`${addFirst} + ${addSecond} − ${sub} = □`, addFirst + addSecond - sub));
+      }
+    }
+  }
+  return out;
+}
+
+/* ---------- 4. 因數／倍數／質數 ---------- */
+function genFactorsPrimes(rng, mode, count, opts = {}) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    if (mode === "list_factors") {
+      const n = randInt(rng, 10, 99);
+      const f = factorsOf(n);
+      out.push(q(`${n} 的所有因數：`, f.join(", ")));
+    } else if (mode === "is_multiple") {
+      const base = randInt(rng, 2, 12);
+      const k = randInt(rng, 2, 20);
+      const n = base * k;
+      const distract = rng() < 0.4 ? n + randInt(rng, 1, base - 1) : n;
+      const yes = distract % base === 0;
+      out.push(q(`${distract} 是 ${base} 的倍數嗎？（是／否）`, yes ? "是" : "否"));
+    } else if (mode === "is_prime") {
+      // mix primes and composites under 100
+      let n;
+      if (rng() < 0.55) {
+        const primes = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97];
+        n = pick(rng, primes);
+      } else {
+        do {
+          n = randInt(rng, 4, 99);
+        } while (isPrime(n));
+      }
+      out.push(q(`${n} 是質數嗎？（是／否）`, isPrime(n) ? "是" : "否"));
+    } else {
+      const d = pick(rng, [2, 3, 5, 10]);
+      const n = randInt(rng, 10, 99);
+      out.push(q(`${n} 能被 ${d} 整除嗎？（是／否）`, n % d === 0 ? "是" : "否"));
+    }
+  }
+  return out;
+}
+
+/* ---------- 5. HCF / LCM ---------- */
+function genHcfLcm(rng, mode, count, opts = {}) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    // keep numbers manageable for listing method (兩位數為主)
+    let a = randInt(rng, 4, 60);
+    let b = randInt(rng, 4, 60);
+    if (a === b) b = a + randInt(rng, 1, 5);
+    const h = gcd(a, b);
+    const l = lcm(a, b);
+    const want =
+      mode === "hcf" ? "hcf" : mode === "lcm" ? "lcm" : pick(rng, ["hcf", "lcm"]);
+    if (want === "hcf") {
+      out.push(q(`${a} 與 ${b} 的 H.C.F. = □`, h));
+    } else {
+      out.push(q(`${a} 與 ${b} 的 L.C.M. = □`, l));
+    }
+  }
+  return out;
+}
+
+/* ---------- 6. 同分母分數 ---------- */
+function genFracSameDen(rng, mode, count, opts = {}) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const den = randInt(rng, 2, 12);
+    const op = rng() < 0.55 ? "+" : "−";
+    if (mode === "le1") {
+      // 3N5: result ≤ 1, proper-ish
+      if (op === "+") {
+        const a = randInt(rng, 1, den - 1);
+        const b = randInt(rng, 1, den - a);
+        const ans = formatFrac(a + b, den, { allowMixed: false });
+        out.push(q(`${a}/${den} + ${b}/${den} = □`, ans));
+      } else {
+        const a = randInt(rng, 1, den);
+        const b = randInt(rng, 0, a);
+        out.push(q(`${a}/${den} − ${b}/${den} = □`, formatFrac(a - b, den, { allowMixed: false })));
+      }
+    } else {
+      // 4N6: can exceed 1, include integers sometimes
+      const a = randInt(rng, 1, den * 2);
+      const b = randInt(rng, 1, den * 2);
+      if (op === "+") {
+        out.push(q(`${a}/${den} + ${b}/${den} = □`, formatFrac(a + b, den, { allowMixed: true })));
+      } else {
+        const hi = Math.max(a, b);
+        const lo = Math.min(a, b);
+        out.push(q(`${hi}/${den} − ${lo}/${den} = □`, formatFrac(hi - lo, den, { allowMixed: true })));
+      }
+    }
+  }
+  return out;
+}
+
+/* ---------- 7. 異分母 ---------- */
+function genFracUnlike(rng, _mode, count, opts = {}) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const d1 = randInt(rng, 2, 12);
+    let d2 = randInt(rng, 2, 12);
+    if (d2 === d1) d2 = d1 === 12 ? 11 : d1 + 1;
+    const n1 = randInt(rng, 1, d1);
+    const n2 = randInt(rng, 1, d2);
+    const op = rng() < 0.55 ? "+" : "−";
+    const L = lcm(d1, d2);
+    if (op === "+") {
+      const num = (n1 * L) / d1 + (n2 * L) / d2;
+      out.push(q(`${n1}/${d1} + ${n2}/${d2} = □`, formatFrac(num, L, { allowMixed: true })));
+    } else {
+      const A = (n1 * L) / d1;
+      const B = (n2 * L) / d2;
+      if (A >= B) {
+        out.push(q(`${n1}/${d1} − ${n2}/${d2} = □`, formatFrac(A - B, L, { allowMixed: true })));
+      } else {
+        out.push(q(`${n2}/${d2} − ${n1}/${d1} = □`, formatFrac(B - A, L, { allowMixed: true })));
+      }
+    }
+  }
+  return out;
+}
+
+/* ---------- 8. 分數乘除 ---------- */
+function genFracMulDiv(rng, mode, count, opts = {}) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const a = { n: randInt(rng, 1, 9), d: randInt(rng, 2, 9) };
+    const b = { n: randInt(rng, 1, 9), d: randInt(rng, 2, 9) };
+    if (mode === "mul" || (mode !== "div" && rng() < 0.5)) {
+      const s = simplifyFrac(a.n * b.n, a.d * b.d);
+      out.push(
+        q(
+          `${a.n}/${a.d} × ${b.n}/${b.d} = □`,
+          formatFrac(s.num, s.den, { allowMixed: true })
+        )
+      );
+    } else {
+      const s = simplifyFrac(a.n * b.d, a.d * b.n);
+      out.push(
+        q(
+          `${a.n}/${a.d} ÷ ${b.n}/${b.d} = □`,
+          formatFrac(s.num, s.den, { allowMixed: true })
+        )
+      );
+    }
+  }
+  return out;
+}
+
+/* ---------- 9. 小數加減 ---------- */
+function genDecAddSub(rng, _mode, count, opts = {}) {
+  const out = [];
+  const mk = () => {
+    const dp = randInt(rng, 1, 2);
+    const raw = randInt(rng, 1, dp === 1 ? 99 : 999);
+    return raw / (dp === 1 ? 10 : 100);
+  };
+  const fmt = (x) => {
+    const s = String(Math.round(x * 100) / 100);
+    return s;
+  };
+  for (let i = 0; i < count; i++) {
+    let a = mk();
+    let b = mk();
+    // keep digit budget roughly like 4N8 (avoid huge integer parts)
+    a = Math.round(a * 100) / 100;
+    b = Math.round(b * 100) / 100;
+    if (a > 50) a = a / 10;
+    if (b > 50) b = b / 10;
+    a = Math.round(a * 100) / 100;
+    b = Math.round(b * 100) / 100;
+    if (rng() < 0.55) {
+      out.push(q(`${fmt(a)} + ${fmt(b)} = □`, fmt(a + b)));
+    } else {
+      const hi = Math.max(a, b);
+      const lo = Math.min(a, b);
+      out.push(q(`${fmt(hi)} − ${fmt(lo)} = □`, fmt(hi - lo)));
+    }
+  }
+  return out;
+}
+
+/* ---------- 10. 分數↔小數 ---------- */
+function genFracDecConvert(rng, mode, count, opts = {}) {
+  const out = [];
+  // 建立足夠大的互化題庫（分母 2,4,5,8,10,16,20,25,40,50,100,125,200,250,500,1000 等可盡除者）
+  const pairs = [];
+  const dens = [2, 4, 5, 8, 10, 16, 20, 25, 40, 50, 100, 125, 200, 250, 500, 1000];
+  for (const d of dens) {
+    for (let n = 1; n < d; n++) {
+      // 只收有限小數（分母質因數僅 2、5）
+      let x = d;
+      while (x % 2 === 0) x /= 2;
+      while (x % 5 === 0) x /= 5;
+      if (x !== 1) continue;
+      const g = (function (a, b) {
+        a = Math.abs(a); b = Math.abs(b);
+        while (b) { const t = a % b; a = b; b = t; }
+        return a || 1;
+      })(n, d);
+      const nn = n / g;
+      const dd = d / g;
+      const val = n / d;
+      // 小數字串：去掉多餘尾零，但保留至少一位小數
+      let dec = val.toFixed(6).replace(/\.?0+$/, "");
+      if (!dec.includes(".")) dec += ".0";
+      // 標準化常見位
+      if (Math.abs(val * 1000 - Math.round(val * 1000)) < 1e-9) {
+        const r = Math.round(val * 1000) / 1000;
+        dec = String(r);
+        if (!dec.includes(".")) dec += ".0";
+      }
+      pairs.push([nn, dd, dec]);
+    }
+  }
+  // 亦加入一位／兩位／三位「純小數 → 分數」
+  for (let dp = 1; dp <= 3; dp++) {
+    const base = 10 ** dp;
+    for (let k = 1; k < base; k++) {
+      const g = (function (a, b) {
+        while (b) { const t = a % b; a = b; b = t; }
+        return a || 1;
+      })(k, base);
+      const nn = k / g;
+      const dd = base / g;
+      let dec = (k / base).toFixed(dp);
+      pairs.push([nn, dd, dec]);
+    }
+  }
+  for (let i = 0; i < count; i++) {
+    const [n, d, dec] = pick(rng, pairs);
+    const simp = `${n}/${d}`;
+    const dir =
+      mode === "dec_to_frac"
+        ? "d2f"
+        : mode === "frac_to_dec"
+          ? "f2d"
+          : pick(rng, ["d2f", "f2d"]);
+    if (dir === "d2f") {
+      out.push(q(`${dec} = □（最簡分數）`, simp));
+    } else {
+      out.push(q(`${simp} = □（小數）`, dec));
+    }
+  }
+  return out;
+}
+
+/* ---------- 11. 小數 ×÷ 10 的冪 ---------- */
+function genDecMulDiv(rng, mode, count, opts = {}) {
+  const out = [];
+  const fmt = (x) => {
+    const r = Math.round(x * 1000) / 1000;
+    return String(r);
+  };
+  for (let i = 0; i < count; i++) {
+    const base = randInt(rng, 1, 999) / pick(rng, [1, 10, 100]);
+    const b = Math.round(base * 100) / 100;
+    if (mode === "mul_powers") {
+      const k = pick(rng, [10, 100, 0.1, 0.01]);
+      out.push(q(`${fmt(b)} × ${k} = □`, fmt(b * k)));
+    } else {
+      const k = pick(rng, [10, 100, 0.1, 0.01]);
+      out.push(q(`${fmt(b)} ÷ ${k} = □`, fmt(b / k)));
+    }
+  }
+  return out;
+}
+
+/* ---------- 12. 四則混合（無嵌套括號） ---------- */
+function genMixedOps(rng, mode, count, opts = {}) {
+  const allowTrivial = !!opts.allowTrivial;
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    if (mode === "mul_add_sub") {
+      // 3N4 style: a×b+c or (a+b)×c — no nesting
+      const form = pick(rng, ["muladd", "mulsub", "paren_mul", "paren_mul2"]);
+      const a = randInt(rng, 1, 12);
+      const b = randInt(rng, 1, 12);
+      const c = randInt(rng, 1, 20);
+      if (form === "muladd") {
+        out.push(q(`${a} × ${b} + ${c} = □`, a * b + c));
+      } else if (form === "mulsub") {
+        const prod = a * b;
+        const s = randInt(rng, 0, prod);
+        out.push(q(`${a} × ${b} − ${s} = □`, prod - s));
+      } else if (form === "paren_mul") {
+        out.push(q(`(${a} + ${b}) × ${c} = □`, (a + b) * c));
+      } else {
+        const x = randInt(rng, 1, 9);
+        const y = randInt(rng, 1, 9);
+        out.push(q(`(${a} + ${b}) × (${x} + ${y}) = □`, (a + b) * (x + y)));
+      }
+    } else {
+      // 4N5: include ÷ sometimes, ≤5 numbers
+      const a = randInt(rng, 2, 20);
+      const b = randInt(rng, 1, 10);
+      const c = randInt(rng, 1, 10);
+      const form = pick(rng, ["divadd", "muldiv", "paren", "five"]);
+      if (form === "divadd") {
+        const prod = b * randInt(rng, 2, 9);
+        out.push(q(`${prod} ÷ ${b} + ${c} = □`, prod / b + c));
+      } else if (form === "muldiv") {
+        if (allowTrivial) {
+          out.push(q(`${a} × ${b} ÷ ${b} = □`, a));
+        } else {
+          const d = randInt(rng, 2, 9);
+          const m = randInt(rng, 2, 9);
+          out.push(q(`${d * m} ÷ ${d} + ${c} = □`, m + c));
+        }
+      } else if (form === "paren") {
+        out.push(q(`${a} × (${b} + ${c}) = □`, a * (b + c)));
+      } else {
+        const d = randInt(rng, 1, 5);
+        const e = randInt(rng, 1, 5);
+        out.push(q(`${a} + ${b} × ${c} − ${d} + ${e} = □`, a + b * c - d + e));
+      }
+    }
+  }
+  return out;
+}
+
+const HANDLERS = {
+  bonds_add_sub: genBondsAddSub,
+  mult_div_table: genMultDiv,
+  add_sub_within_100: genWithin100,
+  add_sub_within_1000: genWithin1000,
+  factors_primes: genFactorsPrimes,
+  hcf_lcm: genHcfLcm,
+  frac_same_den: genFracSameDen,
+  frac_unlike: genFracUnlike,
+  frac_mul_div: genFracMulDiv,
+  dec_add_sub: genDecAddSub,
+  frac_dec_convert: genFracDecConvert,
+  dec_mul_div: genDecMulDiv,
+  mixed_ops: genMixedOps,
+};
+
+/**
+ * 低資訊量／恆等題判定（預設過濾）。
+ * 模式（書面說明見 README「品質」）：
+ * - n − n
+ * - 與 0 的加減：n + 0、0 + n、n − 0，或多項中的 + 0
+ * - 與 0／1 的乘除：n × 0、0 × n、n × 1、1 × n、n ÷ 1、0 ÷ n
+ * - 形如 n × m ÷ m 的相消恆等
+ * - 分解／補數導致加數為 0：n = n + □、n = 0 + □、n + □ = n、□ + 0 = n、0 + □ = n
+ */
+export function isTrivialPrompt(prompt) {
+  const p = String(prompt).replace(/\s+/g, " ").trim();
+  if (/(\d+)\s*−\s*\1\b/.test(p)) return true;
+  if (/(?:^|[^\d])0\s*\+/.test(p) || /\+\s*0(?!\d)/.test(p)) return true;
+  if (/−\s*0(?!\d)/.test(p)) return true;
+  if (/(?:^|[^\d])0\s*×/.test(p) || /×\s*0(?!\d)/.test(p)) return true;
+  if (/(?:^|[^\d])1\s*×/.test(p) || /×\s*1(?!\d)/.test(p)) return true;
+  if (/÷\s*1(?!\d)/.test(p)) return true;
+  if (/(?:^|[^\d])0\s*÷/.test(p)) return true;
+  if (/×\s*(\d+)\s*÷\s*\1\b/.test(p)) return true;
+  if (/(\d+)\s*=\s*\1\s*\+\s*□/.test(p)) return true;
+  if (/\d+\s*=\s*0\s*\+\s*□/.test(p)) return true;
+  if (/(\d+)\s*\+\s*□\s*=\s*\1\b/.test(p)) return true;
+  if (/□\s*\+\s*0\s*=/.test(p)) return true;
+  if (/^0\s*\+\s*□/.test(p)) return true;
+  return false;
+}
+
+/**
+ * @param {string} familyId
+ * @param {string} modeId
+ * @param {function(): number} rng
+ * @param {number} count
+ * @param {{ allowTrivial?: boolean }} [options] allowTrivial 預設 false（對應 UI「包含零／恆等題」關閉）
+ */
+export function generateQuestions(familyId, modeId, rng, count, options = {}) {
+  const fn = HANDLERS[familyId];
+  if (!fn) throw new Error("未知操練族: " + familyId);
+  const allowTrivial = options.allowTrivial === true;
+  const opts = { allowTrivial };
+  const seen = new Set();
+  const out = [];
+  const maxAttempts = Math.max(count * 50, 200);
+
+  for (let attempt = 0; attempt < maxAttempts && out.length < count; attempt++) {
+    const batch = fn(rng, modeId, 1, opts);
+    const item = batch[0];
+    if (!item || item.prompt == null) continue;
+    if (!allowTrivial && isTrivialPrompt(item.prompt)) continue;
+    if (seen.has(item.prompt)) continue;
+    seen.add(item.prompt);
+    out.push(item);
+  }
+
+  // 若仍不足：放寬恆等過濾但仍保持題幹不重複
+  if (out.length < count) {
+    const relaxOpts = { allowTrivial: true };
+    for (let attempt = 0; attempt < maxAttempts && out.length < count; attempt++) {
+      const batch = fn(rng, modeId, 1, relaxOpts);
+      const item = batch[0];
+      if (!item || item.prompt == null) continue;
+      if (seen.has(item.prompt)) continue;
+      seen.add(item.prompt);
+      out.push(item);
+    }
+  }
+
+  return out;
+}
+
+export function getFamily(id) {
+  return DRILL_CATALOG.find((f) => f.id === id);
+}
