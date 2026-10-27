@@ -1,6 +1,6 @@
 /**
- * WordBank arithmetic P0 generators — EDB constraints from edb-primary-arithmetic-map.
- * All questions are 橫式心算 style (no 應用題).
+ * WordBank arithmetic generators — EDB constraints from edb-primary-arithmetic-map.
+ * 橫式心算為主；整數乘除直式另族（無應用題）。
  */
 import { randInt, pick, shuffle } from "./rng.js";
 import {
@@ -28,12 +28,13 @@ export const DRILL_CATALOG = [
   },
   {
     id: "mult_div_table",
-    title_zh: "乘法表與整除除法",
+    title_zh: "乘法表與表內除法",
     edb: "2N3, 2N6",
     modes: [
       { id: "table_0_10", label_zh: "乘法表 0–10（課程要求）" },
       { id: "div_exact_0_10", label_zh: "表內整除除法（無餘數）" },
-      { id: "mixed_0_10", label_zh: "乘除混合（0–10）" },
+      { id: "div_remain_0_10", label_zh: "表內帶餘數除法（商⋯餘；必有餘數）" },
+      { id: "mixed_0_10", label_zh: "乘除混合（0–10；整除）" },
       {
         id: "challenge_11_12",
         label_zh: "挑戰：11–12（課程外延展）",
@@ -58,6 +59,21 @@ export const DRILL_CATALOG = [
       { id: "add_3digit", label_zh: "2N2：三位數加法（和＜1000）" },
       { id: "sub_3digit", label_zh: "2N5：三位數退位減法" },
       { id: "mixed_3", label_zh: "三數加減混合（≤三個位）" },
+    ],
+  },
+  {
+    id: "int_mul_div_vertical",
+    title_zh: "整數乘除直式",
+    edb: "3N2, 3N3, 4N1, 4N2",
+    modes: [
+      { id: "mul_2by1", label_zh: "3N2：兩位數 × 一位數（直式）" },
+      { id: "mul_3by1", label_zh: "3N2：三位數 × 一位數（直式）" },
+      { id: "div_2by1", label_zh: "3N3：兩位數 ÷ 一位數（直式；可含餘數）" },
+      { id: "div_3by1", label_zh: "3N3：三位數 ÷ 一位數（直式；可含餘數）" },
+      { id: "mul_2by2", label_zh: "4N1：兩位數 × 兩位數（直式）" },
+      { id: "mul_3by2", label_zh: "4N1：三位數 × 兩位數（直式）" },
+      { id: "div_2by2", label_zh: "4N2：兩位數 ÷ 兩位數（直式；可含餘數）" },
+      { id: "div_3by2", label_zh: "4N2：三位數 ÷ 兩位數（直式；可含餘數）" },
     ],
   },
   {
@@ -204,7 +220,20 @@ function genMultDiv(rng, mode, count, opts = {}) {
   const mulLo = mode === "challenge_11_12" ? 11 : factorLo;
 
   for (let i = 0; i < count; i++) {
-    if (mode === "div_exact_0_10" || (mode === "mixed_0_10" && rng() < 0.45)) {
+    if (mode === "div_remain_0_10") {
+      // 2N6 帶餘數：表內可解；答案格式「商⋯餘」；本模式必有餘數（與整除模式對照）
+      const d = allowTrivial ? randInt(rng, 2, 10) : randInt(rng, 2, 10);
+      const quot = allowTrivial ? randInt(rng, 0, 10) : randInt(rng, 1, 10);
+      const rem = randInt(rng, 1, d - 1);
+      const dividend = d * quot + rem;
+      out.push(
+        q(`${dividend} ÷ ${d} = □（商⋯餘）`, `${quot}⋯${rem}`, {
+          remain: true,
+          quotient: quot,
+          remainder: rem,
+        })
+      );
+    } else if (mode === "div_exact_0_10" || (mode === "mixed_0_10" && rng() < 0.45)) {
       let d = allowTrivial ? randInt(rng, 1, 10) : randInt(rng, 2, 10);
       let m = allowTrivial ? randInt(rng, 0, 10) : randInt(rng, 2, 10);
       const product = d * m;
@@ -654,11 +683,153 @@ function genMixedOps(rng, mode, count, opts = {}) {
   return out;
 }
 
+/* ---------- 13. 整數乘除直式（3N2 / 3N3 / 4N1 / 4N2） ---------- */
+/** 答案：整除只寫商；有餘數寫「商⋯餘」（香港小學常見記法）。 */
+function formatQuotRem(quot, rem) {
+  if (rem === 0) return String(quot);
+  return `${quot}⋯${rem}`;
+}
+
+function digitsOf(n) {
+  return String(Math.abs(n | 0)).length;
+}
+
+function genIntMulDivVertical(rng, mode, count, opts = {}) {
+  const allowTrivial = !!opts.allowTrivial;
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    if (mode === "mul_2by1" || mode === "mul_3by1" || mode === "mul_2by2" || mode === "mul_3by2") {
+      let a;
+      let b;
+      if (mode === "mul_2by1") {
+        a = randInt(rng, 10, 99);
+        b = allowTrivial ? randInt(rng, 0, 9) : randInt(rng, 2, 9);
+      } else if (mode === "mul_3by1") {
+        a = randInt(rng, 100, 999);
+        b = allowTrivial ? randInt(rng, 0, 9) : randInt(rng, 2, 9);
+      } else if (mode === "mul_2by2") {
+        a = randInt(rng, 10, 99);
+        b = allowTrivial ? randInt(rng, 10, 99) : randInt(rng, 12, 99);
+        if (!allowTrivial && (b % 10 === 0 || b % 10 === 1)) {
+          b = randInt(rng, 12, 99);
+          if (b % 10 < 2) b += 2;
+        }
+      } else {
+        // mul_3by2 — 4N1
+        a = randInt(rng, 100, 999);
+        b = allowTrivial ? randInt(rng, 10, 99) : randInt(rng, 12, 99);
+        if (!allowTrivial && b % 10 < 2) b = Math.min(99, b + 2);
+      }
+      if (!allowTrivial && (b === 0 || b === 1)) b = 2;
+      const prod = a * b;
+      out.push(
+        q(`${a} × ${b} = □`, prod, {
+          layout: "vertical_mul",
+          top: a,
+          bottom: b,
+          product: prod,
+        })
+      );
+    } else {
+      // division modes — 3N3 / 4N2；課程含餘數；約七成帶餘、三成整除
+      let divisor;
+      let quot;
+      let rem;
+      let dividend;
+      const wantRem = rng() < 0.7;
+      if (mode === "div_2by1") {
+        divisor = allowTrivial ? randInt(rng, 2, 9) : randInt(rng, 2, 9);
+        quot = randInt(rng, 2, 9); // 商仍為一位為主，被除數兩位
+        rem = wantRem ? randInt(rng, 1, divisor - 1) : 0;
+        dividend = divisor * quot + rem;
+        // 保證兩位數被除數
+        let guard = 0;
+        while ((dividend < 10 || dividend > 99) && guard < 40) {
+          quot = randInt(rng, 2, Math.floor(99 / divisor));
+          rem = wantRem ? randInt(rng, 1, divisor - 1) : 0;
+          if (divisor * quot + rem > 99) rem = 0;
+          dividend = divisor * quot + rem;
+          guard++;
+        }
+        if (dividend < 10) {
+          quot = randInt(rng, 5, 9);
+          rem = 0;
+          dividend = divisor * quot;
+        }
+      } else if (mode === "div_3by1") {
+        divisor = allowTrivial ? randInt(rng, 2, 9) : randInt(rng, 2, 9);
+        quot = randInt(rng, 12, 99);
+        rem = wantRem ? randInt(rng, 1, divisor - 1) : 0;
+        dividend = divisor * quot + rem;
+        let guard = 0;
+        while ((dividend < 100 || dividend > 999) && guard < 40) {
+          quot = randInt(rng, 12, Math.min(99, Math.floor(999 / divisor)));
+          rem = wantRem ? randInt(rng, 1, divisor - 1) : 0;
+          if (divisor * quot + rem > 999) rem = 0;
+          dividend = divisor * quot + rem;
+          guard++;
+        }
+      } else if (mode === "div_2by2") {
+        divisor = allowTrivial ? randInt(rng, 10, 40) : randInt(rng, 11, 40);
+        quot = randInt(rng, 2, 8);
+        rem = wantRem ? randInt(rng, 1, divisor - 1) : 0;
+        dividend = divisor * quot + rem;
+        let guard = 0;
+        while ((dividend < 10 || dividend > 99 || digitsOf(dividend) !== 2) && guard < 50) {
+          divisor = randInt(rng, 11, 45);
+          quot = randInt(rng, 2, Math.max(2, Math.floor(99 / divisor)));
+          rem = wantRem && divisor > 1 ? randInt(rng, 1, Math.min(divisor - 1, 99 - divisor * quot)) : 0;
+          if (rem < 0) rem = 0;
+          dividend = divisor * quot + rem;
+          guard++;
+        }
+        if (digitsOf(dividend) !== 2 || digitsOf(divisor) !== 2) {
+          divisor = 12;
+          quot = 5;
+          rem = wantRem ? 3 : 0;
+          dividend = divisor * quot + rem;
+        }
+      } else {
+        // div_3by2 — 4N2
+        divisor = allowTrivial ? randInt(rng, 10, 50) : randInt(rng, 11, 50);
+        quot = randInt(rng, 3, 40);
+        rem = wantRem ? randInt(rng, 1, divisor - 1) : 0;
+        dividend = divisor * quot + rem;
+        let guard = 0;
+        while ((dividend < 100 || dividend > 999) && guard < 50) {
+          divisor = randInt(rng, 11, 50);
+          const maxQ = Math.floor(999 / divisor);
+          quot = randInt(rng, 3, Math.max(3, Math.min(80, maxQ)));
+          rem = wantRem ? randInt(rng, 1, divisor - 1) : 0;
+          if (divisor * quot + rem > 999) {
+            rem = 0;
+            quot = Math.min(quot, maxQ);
+          }
+          dividend = divisor * quot + rem;
+          guard++;
+        }
+      }
+      out.push(
+        q(`${dividend} ÷ ${divisor} = □`, formatQuotRem(quot, rem), {
+          layout: "vertical_div",
+          dividend,
+          divisor,
+          quotient: quot,
+          remainder: rem,
+          remain: rem > 0,
+        })
+      );
+    }
+  }
+  return out;
+}
+
 const HANDLERS = {
   bonds_add_sub: genBondsAddSub,
   mult_div_table: genMultDiv,
   add_sub_within_100: genWithin100,
   add_sub_within_1000: genWithin1000,
+  int_mul_div_vertical: genIntMulDivVertical,
   factors_primes: genFactorsPrimes,
   hcf_lcm: genHcfLcm,
   frac_same_den: genFracSameDen,

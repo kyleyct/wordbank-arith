@@ -252,6 +252,108 @@
     .frac-neg {
       margin-right: 0.05em;
     }
+
+    /* vertical / schoolbook algorithms (直式) */
+    .q.has-valg {
+      min-height: 28mm;
+      padding-top: 2mm;
+      padding-bottom: 3mm;
+      align-items: flex-start;
+    }
+    .q.ans.has-valg {
+      min-height: 22mm;
+      padding-top: 1.4mm;
+      padding-bottom: 1.8mm;
+    }
+    .qgrid-valg {
+      gap: 3mm 5mm;
+    }
+    .q.has-remain {
+      min-height: 14mm;
+    }
+    .valg {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-end;
+      vertical-align: top;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.15;
+      margin: 0 0.15em;
+    }
+    .valg-row {
+      display: block;
+      text-align: right;
+      padding: 0 0.12em;
+      min-width: 3.2em;
+    }
+    .valg-sign {
+      margin-right: 0.25em;
+      font-weight: 600;
+    }
+    .valg-bar {
+      display: block;
+      align-self: stretch;
+      min-width: 3.6em;
+      height: 0;
+      margin: 0.12em 0 0.2em;
+      border: none;
+      border-top: 2px solid var(--ink);
+    }
+    .valg-ans {
+      min-height: 12mm;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .valg-ans-text {
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .blank.blank-valg {
+      width: 18mm;
+      height: 11mm;
+      border-radius: 3px;
+    }
+    .blank.blank-valg-div {
+      width: 22mm;
+      height: 10mm;
+    }
+    /* long division: 厂-shaped bracket */
+    .valg-div {
+      align-items: stretch;
+      min-width: 28mm;
+    }
+    .valg-quot {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      min-height: 11mm;
+      padding: 0 0.2em 0.15em 1.8em;
+      margin-left: 1.6em;
+    }
+    .valg-div-body {
+      display: flex;
+      align-items: stretch;
+      border-top: 2px solid var(--ink);
+    }
+    .valg-divisor {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0.15em 0.35em 0.15em 0.1em;
+      border-right: 2px solid var(--ink);
+      font-variant-numeric: tabular-nums;
+      min-width: 1.5em;
+    }
+    .valg-dividend {
+      display: flex;
+      align-items: center;
+      padding: 0.15em 0.45em;
+      font-variant-numeric: tabular-nums;
+      min-width: 2.8em;
+      justify-content: flex-end;
+    }
+
     .sheet-footer {
       margin-top: 1rem;
       font-size: 0.75rem;
@@ -318,7 +420,7 @@
         <button type="button" id="btn-print">列印／PDF</button>
       </div>
     </div>
-    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。</p>
+    <p class="honesty">課程說明：香港小學必修為<strong>乘法表 (0–10)</strong>；「11–12 挑戰」已標示為<strong>課程外延展</strong>，並非教育局要求。「100 以內」與「1000 以內（三位數）」為<strong>獨立操練族</strong>，不會混題。表內除法分<strong>整除</strong>與<strong>帶餘數（商⋯餘）</strong>兩模式；「整數乘除直式」另族（3N2／3N3／4N1／4N2），位數限制依課程地圖。</p>
   </div>
 
   <p id="empty-hint">請按「產生工作紙」。</p>

@@ -97,6 +97,138 @@ for (const fam of DRILL_CATALOG) {
       }
     }
 
+
+    if (fam.id === "mult_div_table" && mode.id === "div_remain_0_10") {
+      for (const q of qs) {
+        if (!/⋯/.test(String(q.answer))) {
+          console.error("remain mode missing ⋯", q);
+          failures++;
+          break;
+        }
+        const m = String(q.answer).match(/^(\d+)⋯(\d+)$/);
+        if (!m || +m[2] <= 0) {
+          console.error("remain must be >0", q);
+          failures++;
+          break;
+        }
+        const dm = q.prompt.match(/(\d+)\s*÷\s*(\d+)/);
+        if (dm) {
+          const dividend = +dm[1];
+          const divisor = +dm[2];
+          if (dividend % divisor === 0) {
+            console.error("remain mode exact leak", q.prompt);
+            failures++;
+            break;
+          }
+          if (+m[1] * divisor + +m[2] !== dividend) {
+            console.error("remain arithmetic wrong", q);
+            failures++;
+            break;
+          }
+          if (divisor > 10) {
+            console.error("table remain divisor>10", q.prompt);
+            failures++;
+            break;
+          }
+        }
+      }
+    }
+
+    if (fam.id === "int_mul_div_vertical") {
+      for (const q of qs) {
+        if (!q.meta || !q.meta.layout) {
+          console.error("vertical missing layout meta", q);
+          failures++;
+          break;
+        }
+        if (mode.id.startsWith("mul_")) {
+          if (q.meta.layout !== "vertical_mul") {
+            console.error("expected vertical_mul", mode.id, q);
+            failures++;
+            break;
+          }
+          const top = q.meta.top;
+          const bot = q.meta.bottom;
+          const td = String(top).length;
+          const bd = String(bot).length;
+          if (mode.id === "mul_2by1" && !(td === 2 && bd === 1)) {
+            console.error("mul_2by1 digit leak", top, bot);
+            failures++;
+            break;
+          }
+          if (mode.id === "mul_3by1" && !(td === 3 && bd === 1)) {
+            console.error("mul_3by1 digit leak", top, bot);
+            failures++;
+            break;
+          }
+          if (mode.id === "mul_2by2" && !(td === 2 && bd === 2)) {
+            console.error("mul_2by2 digit leak", top, bot);
+            failures++;
+            break;
+          }
+          if (mode.id === "mul_3by2" && !(td === 3 && bd === 2)) {
+            console.error("mul_3by2 digit leak", top, bot);
+            failures++;
+            break;
+          }
+          if (String(top * bot) !== String(q.answer)) {
+            console.error("mul product mismatch", q);
+            failures++;
+            break;
+          }
+        }
+        if (mode.id.startsWith("div_")) {
+          if (q.meta.layout !== "vertical_div") {
+            console.error("expected vertical_div", mode.id, q);
+            failures++;
+            break;
+          }
+          const dividend = q.meta.dividend;
+          const divisor = q.meta.divisor;
+          const dd = String(dividend).length;
+          const vd = String(divisor).length;
+          if (mode.id === "div_2by1" && !(dd === 2 && vd === 1)) {
+            console.error("div_2by1 digit leak", dividend, divisor);
+            failures++;
+            break;
+          }
+          if (mode.id === "div_3by1" && !(dd === 3 && vd === 1)) {
+            console.error("div_3by1 digit leak", dividend, divisor);
+            failures++;
+            break;
+          }
+          if (mode.id === "div_2by2" && !(dd === 2 && vd === 2)) {
+            console.error("div_2by2 digit leak", dividend, divisor);
+            failures++;
+            break;
+          }
+          if (mode.id === "div_3by2" && !(dd === 3 && vd === 2)) {
+            console.error("div_3by2 digit leak", dividend, divisor);
+            failures++;
+            break;
+          }
+          const quot = q.meta.quotient;
+          const rem = q.meta.remainder;
+          if (quot * divisor + rem !== dividend) {
+            console.error("div arithmetic wrong", q);
+            failures++;
+            break;
+          }
+          if (rem < 0 || rem >= divisor) {
+            console.error("bad remainder", q);
+            failures++;
+            break;
+          }
+          const expect = rem === 0 ? String(quot) : `${quot}⋯${rem}`;
+          if (String(q.answer) !== expect) {
+            console.error("div answer format", q.answer, expect);
+            failures++;
+            break;
+          }
+        }
+      }
+    }
+
     const rng2 = createRng(seed);
     const qs2 = generateQuestions(fam.id, mode.id, rng2, 48, { allowTrivial: false });
     if (JSON.stringify(qs) !== JSON.stringify(qs2)) {

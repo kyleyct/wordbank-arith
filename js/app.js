@@ -26,6 +26,12 @@ function syncModes() {
     opt.textContent = m.extracurricular ? `⚠ ${m.label_zh}` : m.label_zh;
     mode.appendChild(opt);
   }
+  // 直式題較佔高：預設改為 2 欄、約 24 題（使用者仍可手動改）
+  if (f.id === "int_mul_div_vertical") {
+    $("#columns").value = "2";
+    const c = Number($("#count").value);
+    if (!Number.isFinite(c) || c >= 40) $("#count").value = "24";
+  }
 }
 
 function activeModeMeta() {
@@ -49,6 +55,34 @@ function mixedHtml(whole, num, den, neg = false) {
   const sign = neg ? '<span class="frac-neg">−</span>' : "";
   return `<span class="mixed">${sign}<span class="mixed-whole">${whole}</span>${fracHtml(num, den, false)}</span>`;
 }
+
+/** Schoolbook vertical multiplication (stacked operands + bar + blank). */
+function verticalMulHtml(top, bottom, { showAnswer = false, answer = "" } = {}) {
+  const ans = showAnswer
+    ? `<span class="valg-ans-text">${escapeHtml(String(answer))}</span>`
+    : `<span class="blank blank-valg" aria-label="填空"></span>`;
+  return `<span class="valg valg-mul" title="${top} × ${bottom}">
+    <span class="valg-row valg-top">${top}</span>
+    <span class="valg-row valg-bot"><span class="valg-sign">×</span>${bottom}</span>
+    <span class="valg-bar" aria-hidden="true"></span>
+    <span class="valg-row valg-ans">${ans}</span>
+  </span>`;
+}
+
+/** Schoolbook long-division bracket; blank for 商（⋯餘）. */
+function verticalDivHtml(dividend, divisor, { showAnswer = false, answer = "" } = {}) {
+  const ans = showAnswer
+    ? `<span class="valg-ans-text">${escapeHtml(String(answer))}</span>`
+    : `<span class="blank blank-valg blank-valg-div" aria-label="填空"></span>`;
+  return `<span class="valg valg-div" title="${dividend} ÷ ${divisor}">
+    <span class="valg-quot">${ans}</span>
+    <span class="valg-div-body">
+      <span class="valg-divisor">${divisor}</span>
+      <span class="valg-dividend">${dividend}</span>
+    </span>
+  </span>`;
+}
+
 
 /**
  * Escape HTML, then turn schoolbook fractions (n/d, mixed w n/d) into stacked
@@ -96,10 +130,27 @@ function renderSheet(questions, meta) {
 
   const rows = Math.max(1, Math.ceil(questions.length / cols));
 
+  const isVertical = questions.some((q) => q.meta && (q.meta.layout === "vertical_mul" || q.meta.layout === "vertical_div"));
+  const remainHint = questions.some((q) => q.meta && (q.meta.remain || q.meta.layout === "vertical_div"));
+
   const qHtml = questions
     .map((q, i) => {
+      const layout = q.meta && q.meta.layout;
+      if (layout === "vertical_mul") {
+        return `<div class="q has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalMulHtml(
+          q.meta.top,
+          q.meta.bottom
+        )}</span></div>`;
+      }
+      if (layout === "vertical_div") {
+        return `<div class="q has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalDivHtml(
+          q.meta.dividend,
+          q.meta.divisor
+        )}</span></div>`;
+      }
       const fracAns = looksLikeFraction(q.answer) || looksLikeFraction(q.prompt);
-      const cls = fracAns ? "q has-frac" : "q";
+      const remainAns = /⋯/.test(String(q.answer)) || (q.meta && q.meta.remain);
+      const cls = fracAns ? "q has-frac" : remainAns ? "q has-remain" : "q";
       return `<div class="${cls}"><span class="qn">${i + 1}.</span> <span class="qp">${formatMathHtml(
         q.prompt,
         { fracBlank: looksLikeFraction(q.answer) }
@@ -107,11 +158,31 @@ function renderSheet(questions, meta) {
     })
     .join("");
 
-  sheet.innerHTML = `${header}<div class="qgrid cols-${cols}" style="--rows:${rows}">${qHtml}</div>
-    <footer class="sheet-footer">橫式心算　約 10–15 秒／題　自檢請見答案頁</footer>`;
+  const footerBits = [];
+  if (isVertical) footerBits.push("直式演算　自檢請見答案頁");
+  else footerBits.push("橫式心算　約 10–15 秒／題　自檢請見答案頁");
+  if (remainHint) footerBits.push("帶餘數答案格式：商⋯餘（整除時只寫商）");
+
+  sheet.innerHTML = `${header}<div class="qgrid cols-${cols}${isVertical ? " qgrid-valg" : ""}" style="--rows:${rows}">${qHtml}</div>
+    <footer class="sheet-footer">${footerBits.join("　")}</footer>`;
 
   const aHtml = questions
     .map((q, i) => {
+      const layout = q.meta && q.meta.layout;
+      if (layout === "vertical_mul") {
+        return `<div class="q ans has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalMulHtml(
+          q.meta.top,
+          q.meta.bottom,
+          { showAnswer: true, answer: q.answer }
+        )}</span></div>`;
+      }
+      if (layout === "vertical_div") {
+        return `<div class="q ans has-valg"><span class="qn">${i + 1}.</span> <span class="qp">${verticalDivHtml(
+          q.meta.dividend,
+          q.meta.divisor,
+          { showAnswer: true, answer: q.answer }
+        )}</span></div>`;
+      }
       const fracAns = looksLikeFraction(q.answer);
       const cls = fracAns ? "q ans has-frac" : "q ans";
       return `<div class="${cls}"><span class="qn">${i + 1}.</span> <span class="qp">${formatMathHtml(
@@ -126,7 +197,7 @@ function renderSheet(questions, meta) {
       <h1>${meta.title_zh}</h1>
       <p class="edb">種子：${meta.seed}　題數：${questions.length}</p>
     </header>
-    <div class="qgrid cols-${cols}" style="--rows:${rows}">${aHtml}</div>`;
+    <div class="qgrid cols-${cols}${isVertical ? " qgrid-valg" : ""}" style="--rows:${rows}">${aHtml}</div>`;
 }
 
 function escapeHtml(s) {
